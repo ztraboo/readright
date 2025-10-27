@@ -65,6 +65,14 @@ class TeacherLoginPage extends StatelessWidget {
                       ),
                     );
 
+                    /**********************************************************
+                    Navigate to teacher dashboard WITHOUT verifying login fields
+
+                    The fields must still be filled because of the null check,
+                    but any dummy values work for now
+                    **********************************************************/
+                    Navigator.pushNamed(context, '/teacher-dashboard');
+
                     // Clear fields
                     emailController.clear();
                     passwordController.clear();
