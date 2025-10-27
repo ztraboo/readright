@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import './teacher/teacher_login.dart';
+import 'teacher/teacher_login_screen.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_styles.dart';
 
@@ -75,12 +75,7 @@ class ReaderSelectionPage extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         // Navigate to instructor flow; allow navigation back to this page if needed.
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TeacherLoginPage(),
-                          ),
-                        );
+                        Navigator.pushNamed(context, '/teacher-login');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.buttonPrimaryBlue,

@@ -75,7 +75,7 @@ class TeacherLoginPage extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     // Navigate to Reset Password screen
-                    Navigator.pushNamed(context, '/reset-password');
+                    Navigator.pushNamed(context, '/teacher-password-reset');
                   },
                   child: const Text('Forgot Password?'),
                 ),
