@@ -1,6 +1,7 @@
 //Test changes - Jon
 import 'package:flutter/material.dart';
 import 'screens/landing_screen.dart';
+import 'screens/reader_selection_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +19,8 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/landing',
       routes: {
-        '/landing': (context) => const LandingScreen(),
+        '/landing': (context) => const LandingPage(),
+        '/reader-selection': (context) => const ReaderSelectionPage(),
       },
       debugShowCheckedModeBanner: false,
     );
