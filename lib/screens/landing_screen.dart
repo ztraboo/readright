@@ -3,14 +3,34 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../utils/app_colors.dart';
 import '../utils/app_styles.dart';
+import 'reader_selection_screen.dart';
 
-class LandingScreen extends StatelessWidget {
-  const LandingScreen({super.key});
+class LandingPage extends StatefulWidget {
+  const LandingPage({super.key});
+
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ReaderSelectionPage(),
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bgPrimaryWhite,
       body: Center(
         child: Stack(
           clipBehavior: Clip.none,
@@ -23,7 +43,7 @@ class LandingScreen extends StatelessWidget {
                   width: 1303,
                   height: 764,
                   decoration: ShapeDecoration(
-                    color: AppColors.primaryOrange,
+                    color: AppColors.bgPrimaryOrange,
                     shape: OvalBorder(),
                   ),
                 ),
@@ -65,7 +85,7 @@ class LandingScreen extends StatelessWidget {
                               width: 90,
                               height: 4,
                               decoration: BoxDecoration(
-                                color: AppColors.darkGray,
+                                color: AppColors.textPrimaryGray,
                                 borderRadius: BorderRadius.circular(5),
                                 border: Border.all(
                                   color: Colors.black,
