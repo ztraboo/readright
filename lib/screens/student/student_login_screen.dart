@@ -20,7 +20,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
     super.dispose();
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     final email = _emailController.text.trim();
     
     if (email.isEmpty) {
@@ -36,6 +36,17 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
       SnackBar(
         content: Text('Class passcode sent to $email'),
       ),
+    );
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    // Navigate to the passcode verification screen and remove all previous routes
+    // to prevent going back to the login screen.
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/student-passcode-verification',
+      (Route<dynamic> route) => false,
     );
   }
 
