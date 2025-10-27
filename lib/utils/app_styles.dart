@@ -51,4 +51,13 @@ class AppStyles {
     color: Colors.white,
   );
 
+  // TextField Text Styles
+  // ----------------------------------
+  static const TextStyle textFieldText = TextStyle(
+    fontFamily: 'SF Compact Display',
+    fontSize: 26, 
+    fontWeight: FontWeight.w400,
+    color: Color(0xFF303030),
+  );
+
 }
