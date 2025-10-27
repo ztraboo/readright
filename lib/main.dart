@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'screens/landing_screen.dart';
 import 'screens/reader_selection_screen.dart';
 import 'screens/student/student_login_screen.dart';
+import 'screens/student/student_passcode_verification_screen.dart';
 import 'screens/teacher/teacher_login_screen.dart';
 import 'screens/teacher/teacher_register_screen.dart';
 import 'screens/teacher/teacher_password_reset_screen.dart';
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         '/landing': (context) => const LandingPage(),
         '/reader-selection': (context) => const ReaderSelectionPage(),
         '/student-login': (context) => const StudentLoginPage(),
+        '/student-passcode-verification': (context) => const StudentPasscodeVerificationPage(),
         '/teacher-login': (context) => const TeacherLoginPage(),
         '/teacher-register': (context) => const TeacherRegisterPage(),
         '/teacher-password-reset': (context) => const TeacherPasswordResetPage(),
