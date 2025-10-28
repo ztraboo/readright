@@ -17,7 +17,7 @@ class _StudentPasscodeVerificationPageState
     extends State<StudentPasscodeVerificationPage> {
   String _passcode = '';
 
-  void _handleNext() {
+  Future<void> _handleNext() async {
     if (_passcode.isEmpty || _passcode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -31,6 +31,17 @@ class _StudentPasscodeVerificationPageState
       SnackBar(
         content: Text('Verifying passcode: $_passcode'),
       ),
+    );
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    // Navigate to the passcode verification screen and remove all previous routes
+    // to prevent going back to the login screen.
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/student-word-dashboard',
+      (Route<dynamic> route) => false,
     );
   }
 
