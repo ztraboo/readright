@@ -7,12 +7,12 @@ class ClassStudentDetails extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Details'),
+        title: const Text('[Enter Student Name]'),
       ),
       body: Center(
         // details should describe the student clicked on from class_dashboard
         child: Text(
-          "Details/analytics for Student 1 here"
+          "Details/analytics for [Enter Student Name] here"
         )
       ),
     );

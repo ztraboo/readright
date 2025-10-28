@@ -5,23 +5,44 @@ class TeacherDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    //temp - used for visual example
+    final List<String> classes = [
+      'English 101',
+      'English 102',
+      'Lit and Lang',
+      'Advanced Reading',
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Teacher Dashboard'),
       ),
-      body: Center(
-        // list of classes associated with whatever teacher will determine
-        // how many buttons here and what they're called
-        child: Column(
-          children: [
-            Text("Maybe overall statistics here?"),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, "/class-dashboard");
-              }, child: Text("Class 1"),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: classes.length,
+              itemBuilder: (context, index) {
+                final className = classes[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    title: Text(className),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/class-dashboard',
+                      );
+                    },
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

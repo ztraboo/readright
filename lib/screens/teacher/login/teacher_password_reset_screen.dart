@@ -52,6 +52,8 @@ class TeacherPasswordResetPage extends StatelessWidget {
 
                 // Clear the field
                 emailController.clear();
+
+                Navigator.pop(context);
               },
               child: const Text('Submit'),
             ),
