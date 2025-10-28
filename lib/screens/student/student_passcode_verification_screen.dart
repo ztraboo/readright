@@ -27,22 +27,27 @@ class _StudentPasscodeVerificationPageState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Verifying passcode: $_passcode'),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Verifying passcode: $_passcode'),
+          duration: Duration(seconds: 2),
+        ),
+      );
 
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
+    await Future.delayed(const Duration(seconds: 3));
 
     // Navigate to the passcode verification screen and remove all previous routes
     // to prevent going back to the login screen.
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/student-word-dashboard',
-      (Route<dynamic> route) => false,
-    );
+    // Only navigate if the widget is still mounted after the delay.
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/student-word-dashboard',
+        (Route<dynamic> route) => false,
+      );
+    }
   }
 
   @override
