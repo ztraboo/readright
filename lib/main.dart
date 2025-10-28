@@ -6,6 +6,7 @@ import 'screens/reader_selection_screen.dart';
 import 'screens/student/student_login_screen.dart';
 import 'screens/student/student_passcode_verification_screen.dart';
 import 'screens/student/student_word_dashboard_screen.dart';
+import 'screens/student/student_word_practice_screen.dart';
 import 'screens/teacher/login/teacher_login_screen.dart';
 import 'screens/teacher/login/teacher_register_screen.dart';
 import 'screens/teacher/login/teacher_password_reset_screen.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         '/student-login': (context) => const StudentLoginPage(),
         '/student-passcode-verification': (context) => const StudentPasscodeVerificationPage(),
         '/student-word-dashboard': (context) => const StudentWordDashboardPage(),
+        '/student-word-practice': (context) => const StudentWordPracticePage(),
         '/teacher-login': (context) => const TeacherLoginPage(),
         '/teacher-register': (context) => const TeacherRegisterPage(),
         '/teacher-password-reset': (context) => const TeacherPasswordResetPage(),

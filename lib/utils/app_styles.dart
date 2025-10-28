@@ -41,6 +41,15 @@ class AppStyles {
     height: 1.1,
   );
 
+  // Bold variant of subheader for emphasizing words inside sentences
+  static const TextStyle subheaderTextBold = TextStyle(
+    fontFamily: 'SF Compact Display',
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    color: Colors.black,
+    height: 1.1,
+  );
+
   static const TextStyle subsectionText = TextStyle(
     fontFamily: 'SF Pro',
     fontSize: 24,
