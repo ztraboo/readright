@@ -55,15 +55,31 @@ class ClassDashboard extends StatelessWidget {
                         'Students',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
+                      const SizedBox(width: 16),
                       //Dropdown - add more choice later
-                      DropdownButton<String>(
-                        value: 'All',
-                        items: const [
-                          DropdownMenuItem(value: 'All', child: Text('All')),
-                        ],
-                        //Add functionality later
-                        onChanged: null,
-                      ),
+                      Expanded(
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: 'All',
+                              items: const [
+                                DropdownMenuItem(value: 'All', child: Text('All')),
+                              ],
+                              //Add Functionality
+                              onChanged: null, 
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 16),
+                      //Add Student
+                      IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            tooltip: 'Add Class',
+                            onPressed: () {
+                              //Add Functionality
+                            },
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
