@@ -22,7 +22,7 @@ class AppStyles {
     height: 0.5,
   );
 
-  // General Text Styles
+  // Page Text Styles
   // ----------------------------------
 
   static const TextStyle headerText = TextStyle(
@@ -40,7 +40,15 @@ class AppStyles {
     color: Colors.black,
     height: 1.1,
   );
-  
+
+  static const TextStyle subsectionText = TextStyle(
+    fontFamily: 'SF Pro',
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    color: Colors.black,
+    height: 1.5,
+  );
+
   // Button Text Styles
   // ----------------------------------
   static const TextStyle buttonText = TextStyle(
@@ -49,6 +57,23 @@ class AppStyles {
     fontWeight: FontWeight.w600,
     letterSpacing: -0.23,
     color: Colors.white,
+  );
+
+  // Chip Text Styles
+  // ----------------------------------
+  static const TextStyle chipText = TextStyle(
+    fontFamily: 'SF Pro',
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    height: 1.375,
+  );
+
+  static const TextStyle chipFilter = TextStyle(
+    fontFamily: 'SF Pro',
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: Color(0xFF7498C4),
+    height: 1.375,
   );
 
   // TextField Text Styles
