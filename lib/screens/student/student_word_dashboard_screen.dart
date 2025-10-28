@@ -166,6 +166,7 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
             child: FractionallySizedBox(
               widthFactor: progress,
               child: Container(
+                width: double.infinity,
                 height: 6,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0088FF),
@@ -299,15 +300,19 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
   }
 
   Widget _buildWordItem(String word, String category, Color categoryColor, bool completed) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFF88843), width: 1),
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/student-word-practice');
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFF88843), width: 1),
+        ),
+        child: Row(
         children: [
           Container(
             width: 10,
@@ -340,6 +345,7 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
           const SizedBox(width: 20),
         ],
       ),
+      ),
     );
   }
 
@@ -366,4 +372,3 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     }
   }
 }
-
