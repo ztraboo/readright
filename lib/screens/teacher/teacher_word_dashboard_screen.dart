@@ -23,14 +23,14 @@ class CsvWord {
 
 // extract only the words from seed_worlds.csv
 Future <List<String>> loadWords() async {
-  final words = await rootBundle.loadString('assets/data/seed_words.csv');
+  final words = await rootBundle.loadString('data/seed_words.csv');
   final lines = words.split('\n');
   return lines.skip(1).map((line) => line.split(',')[0].trim()).toList();
 }
 
 // extract the full csv into Map<word, CsvWord with details>
 Future<Map<String, CsvWord>> loadCsv() async {
-  final csv = await rootBundle.loadString('assets/data/seed_words.csv');
+  final csv = await rootBundle.loadString('data/seed_words.csv');
   final lines = csv.split('\n');
   final Map<String, CsvWord> wordMap = {};
 
@@ -72,6 +72,8 @@ class _TeacherWordDashboardPage extends State<TeacherWordDashboardPage> {
 
   final Map<String, TextEditingController> sentenceControllers = {};
   final TextEditingController categoryController = TextEditingController();
+  
+  Map<String, bool> switchStates = {};
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +130,15 @@ class _TeacherWordDashboardPage extends State<TeacherWordDashboardPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ListTile(
+                          leading: Switch(
+                            value: switchStates[word] ?? false,
+                            onChanged: (val) {
+                              // TODO: Add logic later
+                              setState(() {
+                                switchStates[word] = val;
+                              });
+                            },
+                          ),
                           title: Text(word),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
