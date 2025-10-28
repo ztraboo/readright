@@ -309,8 +309,8 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
         height: 64,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0xFFF88843), width: 1),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFFF88843), width: 1.5),
         ),
         child: Row(
         children: [

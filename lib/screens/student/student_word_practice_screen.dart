@@ -47,7 +47,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     }
   }
 
-  void _stopRecording() {
+  Future<void> _stopRecording() async {
     _recordTimer?.cancel();
     _recordTimer = null;
     setState(() {
@@ -60,6 +60,24 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
       }
       _msElapsed = 0;
     });
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Verifying recording quality...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+    await Future.delayed(const Duration(seconds: 3));
+    // if (!mounted) return;
+    // Only navigate if the widget is still mounted after the delay.
+    if (mounted) {
+      Navigator.of(context).pushNamed(
+        '/student-word-feedback',
+      );
+    }
   }
 
   @override
