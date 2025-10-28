@@ -8,9 +8,7 @@ class TeacherPasswordResetPage extends StatelessWidget {
     final TextEditingController emailController = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reset Password'),
-      ),
+      appBar: AppBar(title: const Text('Reset Password')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -35,7 +33,7 @@ class TeacherPasswordResetPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 final email = emailController.text.trim();
-                
+
                 if (email.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Please enter your email')),
@@ -45,9 +43,7 @@ class TeacherPasswordResetPage extends StatelessWidget {
 
                 // Show confirmation message
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Reset link sent to $email'),
-                  ),
+                  SnackBar(content: Text('Reset link sent to $email')),
                 );
 
                 // Clear the field

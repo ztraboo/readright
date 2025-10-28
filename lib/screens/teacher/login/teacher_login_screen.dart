@@ -9,9 +9,7 @@ class TeacherLoginPage extends StatelessWidget {
     final TextEditingController passwordController = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
+      appBar: AppBar(title: const Text('Login')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Center(
@@ -60,9 +58,7 @@ class TeacherLoginPage extends StatelessWidget {
 
                     // Simulate login success
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Signing in as $email'),
-                      ),
+                      SnackBar(content: Text('Signing in as $email')),
                     );
 
                     /**********************************************************

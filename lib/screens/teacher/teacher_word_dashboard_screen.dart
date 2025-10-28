@@ -5,10 +5,6 @@ class TeacherWordDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Word Dashboard'),
-      ),
-    );
+    return Scaffold(appBar: AppBar(title: const Text('Word Dashboard')));
   }
 }

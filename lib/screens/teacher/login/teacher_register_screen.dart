@@ -9,12 +9,11 @@ class TeacherRegisterPage extends StatelessWidget {
     final TextEditingController institutionController = TextEditingController();
     final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
-    final TextEditingController retypePasswordController = TextEditingController();
+    final TextEditingController retypePasswordController =
+        TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Register Account'),
-      ),
+      appBar: AppBar(title: const Text('Register Account')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(

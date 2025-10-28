@@ -53,33 +53,39 @@ class ClassDashboard extends StatelessWidget {
                       //Student Tab
                       const Text(
                         'Students',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       //Dropdown - add more choice later
                       Expanded(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: DropdownButton<String>(
-                              isExpanded: true,
-                              value: 'All',
-                              items: const [
-                                DropdownMenuItem(value: 'All', child: Text('All')),
-                              ],
-                              //Add Functionality
-                              onChanged: null, 
-                            ),
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: 'All',
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'All',
+                                child: Text('All'),
+                              ),
+                            ],
+                            //Add Functionality
+                            onChanged: null,
                           ),
                         ),
+                      ),
                       const SizedBox(width: 16),
                       //Add Student
                       IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            tooltip: 'Add Class',
-                            onPressed: () {
-                              //Add Functionality
-                            },
-                        ),
+                        icon: const Icon(Icons.add_circle_outline),
+                        tooltip: 'Add Class',
+                        onPressed: () {
+                          //Add Functionality
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -110,13 +116,17 @@ class ClassDashboard extends StatelessWidget {
                                   color: Colors.green,
                                 ),
                                 const SizedBox(height: 4),
-                                Text('${(progress * 100).toStringAsFixed(0)}% complete'),
+                                Text(
+                                  '${(progress * 100).toStringAsFixed(0)}% complete',
+                                ),
                               ],
                             ),
                             //Go to Student Details
                             trailing: const Icon(Icons.arrow_forward),
-                            onTap: () =>
-                                Navigator.pushNamed(context, '/class-student-details'),
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              '/class-student-details',
+                            ),
                           ),
                         );
                       },
@@ -156,8 +166,14 @@ class ClassDashboard extends StatelessWidget {
                         value: 'All',
                         items: const [
                           DropdownMenuItem(value: 'All', child: Text('All')),
-                          DropdownMenuItem(value: 'Sight Words', child: Text('Sight Words')),
-                          DropdownMenuItem(value: 'Phonics Pattern', child: Text('Phonics Pattern')),
+                          DropdownMenuItem(
+                            value: 'Sight Words',
+                            child: Text('Sight Words'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Phonics Pattern',
+                            child: Text('Phonics Pattern'),
+                          ),
                         ],
                         //Add functionality later
                         onChanged: null,
@@ -166,9 +182,12 @@ class ClassDashboard extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.control_point_outlined),
                         onPressed: () {
-                          Navigator.pushNamed(context, '/teacher-word-dashboard');
+                          Navigator.pushNamed(
+                            context,
+                            '/teacher-word-dashboard',
+                          );
                         },
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),

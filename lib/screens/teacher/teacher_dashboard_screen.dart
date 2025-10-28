@@ -14,15 +14,16 @@ class TeacherDashboardPage extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Teacher Dashboard'),
-      ),
+      appBar: AppBar(title: const Text('Teacher Dashboard')),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -49,15 +50,15 @@ class TeacherDashboardPage extends StatelessWidget {
               itemBuilder: (context, index) {
                 final className = classes[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: ListTile(
                     title: Text(className),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/class-dashboard',
-                      );
+                      Navigator.pushNamed(context, '/class-dashboard');
                     },
                   ),
                 );
@@ -78,11 +79,14 @@ class TeacherDashboardPage extends StatelessWidget {
                 label: const Text('Go to Word Dashboard'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
