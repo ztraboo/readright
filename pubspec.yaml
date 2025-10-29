@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_svg: ^2.0.7
   flutter_otp_text_field: ^1.2.0
+  firebase_core: ^4.2.0
 
 dev_dependencies:
   flutter_test:

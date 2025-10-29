@@ -1,5 +1,10 @@
 //Test changes - Jon
 import 'package:flutter/material.dart';
+
+// Firebase packages
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 // import 'package:readright/screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/landing_screen.dart';
 import 'screens/reader_selection_screen.dart';
@@ -16,7 +21,14 @@ import 'screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/teacher/class/class_dashboard_screen.dart';
 import 'screens/teacher/class/class_student_details_screen.dart';
 
-void main() {
+Future<void> main() async {
+
+  // Use default Firebase options for app initialization
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
