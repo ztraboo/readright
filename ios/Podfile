@@ -30,6 +30,13 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
+  # Improve iOS & macOS build times by including the pre-compiled framework.
+  # https://firebase.google.com/docs/firestore/quickstart?authuser=0#set_up_your_development_environment
+  # Details: https://github.com/firebase/flutterfire/issues/2751
+  pod 'FirebaseFirestore',
+    :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git',
+    :tag => '12.4.0'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
