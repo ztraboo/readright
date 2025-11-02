@@ -164,7 +164,7 @@ class _TeacherWordDashboardPage extends State<TeacherWordDashboardPage> {
                                 icon: const Icon(Icons.delete),
                                 onPressed: () {
                                   // todo: add delete logic
-                                  print('Delete ${entry.word}');
+                                  debugPrint('Delete ${entry.word}');
                                 },
                               ),
                             ],

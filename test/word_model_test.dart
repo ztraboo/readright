@@ -12,7 +12,7 @@ void main() {
         sentences: [],
       );
 
-      final expected = FirestoreUtils.generateDeterministicId('away', WordLevel.sightWord.name);
+      final expected = FirestoreUtils.generateDeterministicWordId('away', WordLevel.sightWord.name);
       expect(m.id, equals(expected));
     });
 
@@ -46,7 +46,7 @@ void main() {
         'sentences': <String>[],
       };
       final m = WordModel.fromJson(json);
-      final expected = FirestoreUtils.generateDeterministicId('always', WordLevel.sightWord.name);
+      final expected = FirestoreUtils.generateDeterministicWordId('always', WordLevel.sightWord.name);
       expect(m.id, equals(expected));
     });
 

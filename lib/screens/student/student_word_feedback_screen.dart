@@ -9,7 +9,7 @@ import '../../utils/app_styles.dart';
 
 class StudentWordFeedbackPage extends StatefulWidget {
 
-  const StudentWordFeedbackPage({Key? key}) : super(key: key);
+  const StudentWordFeedbackPage({super.key});
 
   @override
   State<StudentWordFeedbackPage> createState() => _StudentWordFeedbackPageState();

@@ -13,7 +13,7 @@ class StudentWordDashboardPage extends StatefulWidget {
 
 class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
   final Set<String> _selectedFilters = {'Sight Words', 'Minimal Pairs'};
-  final Set<String> _completedWords = {'away'};
+  // final Set<String> _completedWords = {'away'};
 
   void _toggleFilter(String filter) {
     setState(() {

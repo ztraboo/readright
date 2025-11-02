@@ -16,7 +16,7 @@ class WordModel {
     required this.text,
     required this.level,
     required this.sentences,
-  }) : id = id ?? FirestoreUtils.generateDeterministicId(text, level.name); 
+  }) : id = id ?? FirestoreUtils.generateDeterministicWordId(text, level.name); 
 
   // Create a copy of the current WordModel with optional new values.
   WordModel copyWith({
@@ -46,7 +46,7 @@ class WordModel {
   // Create a WordModel instance from JSON data retrieved from Firestore.
   factory WordModel.fromJson(Map<String, dynamic> json) {
     return WordModel(
-      id: (json['id'] as String?) ?? FirestoreUtils.generateDeterministicId(json['text'] as String, json['level'] as String),
+      id: (json['id'] as String?) ?? FirestoreUtils.generateDeterministicWordId(json['text'] as String, json['level'] as String),
       text: json['text'] as String,
       level: WordLevel.values.firstWhere(   
         (e) => e.name == json['level'],

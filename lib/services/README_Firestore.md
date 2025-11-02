@@ -43,6 +43,14 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // users
+    match /users/{docId} {
+      allow read, write: if isSignedIn();
+    }
+    match /users/{docId}/{sub=**} {
+      allow read, write: if isSignedIn();
+    }
+
     // deny everything else
     match /{document=**} {
       allow read, write: if false;

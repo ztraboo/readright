@@ -26,3 +26,31 @@ WordLevel wordLevelFromString(String level) {
   }
 } 
 
+/// Enumeration for different users.
+/// ---------------------------------------------------------------
+
+//// UserRole defines the roles a user can have in the application.
+enum UserRole {
+  teacher,
+  student
+}
+
+extension UserRoleExtension on UserRole {
+  String get name => switch (this) {
+      UserRole.teacher => 'Teacher',
+      UserRole.student => 'Student',
+  };
+}
+
+enum VerificationStatus { unknown, pending, submitted, underReview, approved, rejected }
+
+extension VerificationStatusExtension on VerificationStatus {
+  String get name => switch (this) {
+      VerificationStatus.unknown => 'Unknown',
+      VerificationStatus.pending => 'Pending',
+      VerificationStatus.submitted => 'Submitted',
+      VerificationStatus.underReview => 'Under Review',
+      VerificationStatus.approved => 'Approved',
+      VerificationStatus.rejected => 'Rejected',
+  };
+}

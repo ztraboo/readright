@@ -1,7 +1,7 @@
-
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:readright/models/word_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:readright/models/word_model.dart';
 import 'package:readright/utils/firestore_metadata.dart';
 
 /// Repository for managing word data in Firestore
@@ -19,16 +19,24 @@ import 'package:readright/utils/firestore_metadata.dart';
 
 class WordRepository {
   // Singleton pattern so we don’t open multiple DB connections accidentally. 
-  static final WordRepository _instance = WordRepository._internal();
-  factory WordRepository() => _instance;
-  WordRepository._internal() : _db = FirebaseFirestore.instance;
+  WordRepository._internal({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _db = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  // Factory constructor for WordRepository allowing optional injection
+  // of FirebaseFirestore and FirebaseAuth instances for testing.
+  factory WordRepository({FirebaseFirestore? firestore, FirebaseAuth? auth}) =>
+      WordRepository._internal(firestore: firestore, auth: auth);
 
   /// Create a testable instance backed by an injected [FirebaseFirestore].
-  /// Use this in unit tests with a mock Firestore implementation.
-  WordRepository.withFirestore(FirebaseFirestore firestore) : _db = firestore;
+  /// Use this in unit tests with a mock Firestore and Auth implementation.
+  WordRepository.withFirestoreAndAuth(FirebaseFirestore firestore, FirebaseAuth auth)
+    : _db = firestore, _auth = auth;
 
   // Initialize instance of Cloud Firestore
   final FirebaseFirestore _db;
+  final FirebaseAuth _auth; 
+
 
   // Fetch a word by its ID from Firestore
   Future<WordModel?> fetchWordById(String id) async {
@@ -57,14 +65,20 @@ class WordRepository {
       data,
       isNew: !snapshot.exists,
       // provide uid when available; helper will also attempt FirebaseAuth
-      uid: FirebaseAuth.instance.currentUser?.uid,
+      uid: _auth.currentUser?.uid,
     );
 
-    if (!snapshot.exists) {
-      await docRef.set(prepared);
-    } else {
-      await docRef.set(prepared, SetOptions(merge: true));
+    try {
+      if (!snapshot.exists) {
+        await docRef.set(prepared);
+      } else {
+        await docRef.set(prepared, SetOptions(merge: true));
+      }
+    } on FirebaseException catch (e, st) {
+      // Handle Firestore-specific errors
+      debugPrint("Firestore upsert failed: ${e.code} — ${e.message}\n$st");
     }
+
   } 
 
   // Add a word letting Firestore auto-generate the document ID. After the
@@ -77,18 +91,30 @@ class WordRepository {
     final prepared = FirestoreMetadata.prepareForSave(
       data,
       isNew: true,
-      uid: FirebaseAuth.instance.currentUser?.uid,
+      uid: _auth.currentUser?.uid,
     );
 
-    final docRef = await _db.collection('words').add(prepared);
-    // Optionally write the generated id into the document for easier queries.
-    await docRef.update({'id': docRef.id});
-    return docRef.id;
+    try {
+      final docRef = await _db.collection('words').add(prepared);
+      // Optionally write the generated id into the document for easier queries.
+      await docRef.update({'id': docRef.id});
+      return docRef.id;
+    } on FirebaseException catch (e, st) {
+      // Handle Firestore-specific errors
+      debugPrint("Firestore addWordAutoId failed: ${e.code} — ${e.message}\n$st");
+      rethrow;
+    }
+  
   }
 
   // Delete a word from Firestore by its ID
   Future<void> deleteWord(String id) async {
-    await _db.collection('words').doc(id).delete();
+    try {
+      await _db.collection('words').doc(id).delete();
+    } on FirebaseException catch (e, st) {
+      // Handle Firestore-specific errors
+      debugPrint("Firestore delete failed: ${e.code} — ${e.message}\n$st");
+    }
   }
 
 }
