@@ -39,7 +39,7 @@ class SeedWordsUploader {
         continue;
       }
 
-      final text = fields.length > 0 ? fields[0].trim() : '';
+      final text = fields.isNotEmpty ? fields[0].trim() : '';
       final category = fields.length > 1 ? fields[1].trim() : '';
       final sentences = fields.length > 2
           ? fields.sublist(2).map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
