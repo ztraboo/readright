@@ -12,6 +12,8 @@ class AppColors {
   static const Color bgPrimaryOrange = Color(0xFFF88843);
   static const Color bgPrimaryWhite = Color(0xFFFFFFFF);
   static const Color bgPrimaryGray = Color(0xFFD9D9D9);
+  static const Color bgPrimaryRed = Color(0xFFFF3939);
+  static const Color bgPrimaryDarkGrey = Color(0xFF303030);
 
   // Button colors
   // ----------------------------------

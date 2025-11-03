@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/utils/enums.dart';
@@ -28,6 +29,8 @@ void main() {
       fullName: 'Test User',
       role: UserRole.teacher,
       local: 'en-US',
+      institution: 'Test Institution',
+      username: 'testuser',
       isEmailVerified: true,
       verificationStatus: VerificationStatus.approved,
     );
@@ -64,6 +67,8 @@ void main() {
       expect(fetched.fullName, equals(user.fullName));
       expect(fetched.role, equals(user.role));
       expect(fetched.local, equals(user.local));
+      expect(fetched.institution, equals(user.institution));
+      expect(fetched.username, equals(user.username));
       expect(fetched.isEmailVerified, equals(user.isEmailVerified));
       expect(fetched.verificationStatus, equals(user.verificationStatus));
     });
@@ -257,6 +262,36 @@ void main() {
       expect(data['fullName'], anyOf(equals(fullName), isNull));
     });
 
+    test('createFirebaseEmailPasswordUser rejects duplicate username', () async {
+      final input1 = UserModel.fromJson({
+        'email': 'dup1@example.com',
+        'fullName': 'First',
+        'username': 'duplicateUser',
+      });
+
+      final created = await repo.createFirebaseEmailPasswordUser(
+        user: input1,
+        securePassword: password,
+      );
+      expect(created, isNotNull);
+
+      final input2 = UserModel.fromJson({
+        'email': 'dup2@example.com',
+        'fullName': 'Second',
+        'username': 'duplicateUser',
+      });
+
+      // Attempting to create another account with the same username should
+      // result in a FirebaseAuthException with code 'username-already-exists'.
+      expect(
+        () async => await repo.createFirebaseEmailPasswordUser(
+          user: input2,
+          securePassword: password,
+        ),
+        throwsA(predicate((e) => e is FirebaseAuthException && e.code == 'username-already-exists')),
+      );
+    });
+
     test('signInFirebaseEmailPasswordUser signs in and returns Firestore user', () async {
       final input = UserModel.fromJson({
         // do not provide id so repository will set id from auth result
@@ -286,6 +321,7 @@ void main() {
       expect(fetched.email, equals(email));
       expect(fetched.fullName, anyOf(equals(fullName), isNull));
     });
+
   });
 
 }

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/utils/enums.dart';
@@ -12,6 +14,8 @@ void main() {
         fullName: 'Test User',
         role: UserRole.teacher,
         local: 'en-US',
+        institution: 'Test Institution',
+        username: 'testuser',
         isEmailVerified: true,
         verificationStatus: VerificationStatus.approved,
       );
@@ -25,6 +29,8 @@ void main() {
       expect(restored.fullName, equals(original.fullName));
       expect(restored.role, equals(original.role));
       expect(restored.local, equals(original.local));
+      expect(restored.institution, equals(original.institution));
+      expect(restored.username, equals(original.username));
       expect(restored.isEmailVerified, equals(original.isEmailVerified));
       expect(restored.verificationStatus, equals(original.verificationStatus));
     });
@@ -36,6 +42,7 @@ void main() {
         fullName: 'Test User',
         role: UserRole.teacher,
         local: 'en-US',
+        institution: 'Test Institution',
         isEmailVerified: true,
         verificationStatus: VerificationStatus.approved,
       );
@@ -51,6 +58,8 @@ void main() {
       expect(modified.fullName, equals(original.fullName));
       expect(modified.role, equals(UserRole.student));
       expect(modified.local, equals(original.local));
+      expect(modified.institution, equals(original.institution));
+      expect(modified.username, equals(original.username));
       expect(modified.isEmailVerified, equals(original.isEmailVerified));
       expect(modified.verificationStatus, equals(original.verificationStatus));
     });
