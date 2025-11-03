@@ -87,6 +87,21 @@ class UserRepository {
   // Create a new FirebaseAuth user and corresponding Firestore document.
   Future<UserModel?> createFirebaseEmailPasswordUser({required UserModel user, required String securePassword}) async {
     try {
+      // If a username is provided, ensure it's unique in the users collection
+      final username = user.username.trim();
+      if (username.isNotEmpty) {
+        final existing = await _db.collection('users')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+        if (existing.docs.isNotEmpty) {
+          // Throw an auth-style exception so callers can handle it similarly
+          throw FirebaseAuthException(
+            code: 'username-already-exists',
+            message: 'The username "$username" is already in use.',
+          );
+        }
+      }
       final authResult = await _auth.createUserWithEmailAndPassword(
         email: user.email,
         password: securePassword,

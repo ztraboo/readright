@@ -14,7 +14,23 @@ class Validator {
     return null;
   }
 
-  /// Email Validation
+  // Username Validation
+  static String? validateUsername(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Username is required.';
+    }
+
+    // Regular expression for username validation
+    final usernameRegExp = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
+
+    if (!usernameRegExp.hasMatch(value)) {
+      return 'Invalid username. Please use 3-20 alphanumeric characters.';
+    }
+
+    return null;
+  }
+
+  // Email Validation
   static String? validateEmail(String? value) {
 
     debugPrint('Validating email: $value');
@@ -32,7 +48,7 @@ class Validator {
     return null;
   }
 
-  /// Password Validation using Firebase Authentication Password Policy configuration.
+  // Password Validation using Firebase Authentication Password Policy configuration.
   static String? validatePassword(String? value, PasswordPolicy policy) {
 
     if (value == null || value.isEmpty) {

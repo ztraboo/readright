@@ -58,6 +58,13 @@ class AppStyles {
     height: 1.5,
   );
 
+  static const TextStyle navigationText = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    color: AppColors.buttonPrimaryBlue,
+  );
+
   // Button Text Styles
   // ----------------------------------
   static const TextStyle buttonText = TextStyle(

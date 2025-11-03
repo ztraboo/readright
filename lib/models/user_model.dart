@@ -11,6 +11,8 @@ class UserModel {
   final String email;
   final UserRole role;
   final String local;
+  final String institution;
+  final String username;
 
   final bool isEmailVerified;
   final VerificationStatus verificationStatus;
@@ -22,6 +24,8 @@ class UserModel {
     this.fullName = '',
     this.role = UserRole.student, // Default role is student, teacher will be assigned explicitly when they register for an account.
     this.local = 'en-US',
+    this.institution = '',
+    this.username = '',
     this.isEmailVerified = false,
     this.verificationStatus = VerificationStatus.unknown,
   }) : id = id ?? '';
@@ -33,6 +37,8 @@ class UserModel {
     String? email,
     UserRole? role,
     String? local,
+    String? institution,
+    String? username,
     bool? isEmailVerified,
     VerificationStatus? verificationStatus,
   }) {
@@ -42,6 +48,8 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       local: local ?? this.local,
+      institution: institution ?? this.institution,
+      username: username ?? this.username,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       verificationStatus: verificationStatus ?? this.verificationStatus,
     );
@@ -55,6 +63,8 @@ class UserModel {
       'email': email,
       'role': role.name,
       'local': local,
+      'institution': institution,
+      'username': username,
       'isEmailVerified': isEmailVerified,
       'verificationStatus': verificationStatus.name,
     };
@@ -71,6 +81,9 @@ class UserModel {
               ? UserRole.teacher
               : UserRole.student
           : UserRole.student,
+      local: data.containsKey('local') ? data['local'] ?? 'en-US' : 'en-US',
+      institution: data.containsKey('institution') ? data['institution'] ?? '' : '',
+      username: data.containsKey('username') ? data['username'] ?? '' : '',
       isEmailVerified: data.containsKey('isEmailVerified') ? data['isEmailVerified'] ?? false : false,
       verificationStatus: data.containsKey('verificationStatus')
           ? _mapVerificationStringToEnum(data['verificationStatus'])

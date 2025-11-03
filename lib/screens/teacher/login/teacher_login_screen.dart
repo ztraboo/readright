@@ -65,10 +65,14 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     firebaseAuthPasswordPolicy = await fetchPasswordPolicy();
   }
 
-  void _showSnackBar({required String message, required Duration duration}) {
+   void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: duration),
+      SnackBar(
+        content: Text(message),
+        duration: duration,
+        backgroundColor: bgColor ?? AppColors.bgPrimaryDarkGrey,
+      ),
     );
   }
 
@@ -79,8 +83,9 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
           message: (userModel!.fullName.trim().isNotEmpty == true)
             ? 'Sign in successful! Welcome back, ${userModel!.fullName}.'
             : 'Sign in successful!',
-          duration: const Duration(seconds: 2)
-        );
+          duration: const Duration(seconds: 2),
+          bgColor: AppColors.bgPrimaryDarkGrey,
+       );
 
         /**********************************************************
         Navigate to teacher dashboard after verifying login fields
@@ -99,6 +104,14 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     } 
   }
 
+  // Navigate to the teacher registration screen if the user taps "Sign Up"
+  void _handleSignUp() {
+    Navigator.pushNamed(
+      context,
+      '/teacher-register',
+    );
+  }
+
   Future<void> _handleSignIn() async {
 
     // Validate the form (this triggers validators on TextFormField widgets)
@@ -106,7 +119,8 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     if (!valid) {
       _showSnackBar(
         message: 'Please fix the errors in the form.',
-        duration: const Duration(seconds: 3)
+        duration: const Duration(seconds: 3),
+        bgColor: AppColors.bgPrimaryRed,
       );
       return;
     }
@@ -125,7 +139,8 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     debugPrint('Sign in failed for email: ${emailController.text}');
     _showSnackBar(
       message: 'Sign in failed. Please check your email and password.',
-      duration: const Duration(seconds: 3)
+      duration: const Duration(seconds: 3),
+      bgColor: AppColors.bgPrimaryRed,
     );
     return;
     
@@ -159,7 +174,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     );
   }
 
-    Widget _buildHeader() {
+  Widget _buildHeader() {
     return Container(
       width: double.infinity,
       height: 200,
@@ -185,25 +200,27 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     );
   }
 
-    Widget _buildBody() {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildWelcomeSection(),
-              const SizedBox(height: 27),
-              _buildEmailField(),
-              const SizedBox(height: 14),
-              _buildPasswordField(),
-              const SizedBox(height: 30),
-              _buildSignInButton(),
-            ],
-          ),
+  Widget _buildBody() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWelcomeSection(),
+            const SizedBox(height: 27),
+            _buildEmailField(),
+            const SizedBox(height: 14),
+            _buildPasswordField(),
+            const SizedBox(height: 30),
+            _buildSignInButton(),
+            const SizedBox(height: 25),
+            _buildSignUpMessage(),
+          ],
         ),
-      );
+      ),
+    );
   }
 
   // Displays a verifying login session progress indicator
@@ -316,10 +333,29 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
         ),
         child: Center(
           child: const Text(
-            'SUBMIT',
+            'SIGN IN',
             style: AppStyles.buttonText,
           ),
         ),
+      ),
+    );
+  }
+
+    Widget _buildSignUpMessage() {
+    return GestureDetector(
+      onTap: _handleSignUp,
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            "Don't have an account? ",
+            style: AppStyles.subheaderText,
+          ),
+          Text(
+            "Sign Up",
+            style: AppStyles.navigationText,
+          ),
+        ],
       ),
     );
   }
