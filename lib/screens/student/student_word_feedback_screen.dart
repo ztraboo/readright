@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_sound/public/flutter_sound_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../utils/app_colors.dart';
@@ -32,6 +33,17 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
+  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+
+  Future<void> _handleReplay() async {
+    final path = ModalRoute.of(context)?.settings.arguments as String?;
+    if (path != null) {
+      await _player.openPlayer();
+      await _player.startPlayer(fromURI: path);
+
+    }
+  }
+
   void _handleDashboard() {
     Navigator.pushNamedAndRemoveUntil(
       context,
@@ -56,7 +68,8 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               // const SizedBox(height: 0),
               _buildStarRating(),
               const SizedBox(height: 0),
-              _buildInstructions(),
+              //_buildInstructions(),
+              _buildReplayButton(),
               const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -235,6 +248,26 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
             ),
           );
         }),
+      ),
+    );
+  }
+
+  Widget _buildReplayButton() {
+    return GestureDetector(
+      onTap: _handleReplay,
+      child: Container(
+        height: 44,
+        width: 136,
+        decoration: BoxDecoration(
+          color: AppColors.buttonSecondaryRed,
+          borderRadius: BorderRadius.circular(1000),
+        ),
+        child: const Center(
+          child: Text(
+            'REPLAY',
+            style: AppStyles.buttonText,
+          ),
+        ),
       ),
     );
   }

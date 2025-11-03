@@ -8,9 +8,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+repositories {
+    google()
+    mavenCentral()
+}
+
 android {
     namespace = "com.example.readright"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -40,6 +45,12 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-firestore")
 }
 
 flutter {

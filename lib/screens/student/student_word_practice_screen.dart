@@ -5,6 +5,17 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path/path.dart' as path;
+
+
 class StudentWordPracticePage extends StatefulWidget {
   const StudentWordPracticePage({super.key});
 
@@ -17,10 +28,70 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   bool _isRecording = false;
   Timer? _recordTimer;
   int _msElapsed = 0; // milliseconds elapsed during recording
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  String? _path;
 
-  void _handleRecord() {
+  @override
+  void initState() {
+    super.initState();
+    _recorder.openRecorder();
+    _player.openPlayer();
+    _requestPermission();
+  }
+
+  Future<void> _requestPermission() async {
+    await Permission.microphone.request();
+  }
+
+  Future<String> getAudioFilePath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return '${dir.path}/flutter_sound$timestamp.aac';
+  }
+
+  Future<void> uploadAudioFile(String filePath) async {
+    final file = File(filePath);
+    final fileName = path.basename(filePath);
+    final storageRef = FirebaseStorage.instance.ref().child('audio/$fileName');
+
+    try {
+      print('Uploading file from: ${file.path}');
+
+      if (!file.existsSync()) {
+        print('File does not exist at: ${file.path}');
+        return;
+      }
+
+      // pass empty, non null into putFile to appease firebase
+      final metadata = SettableMetadata();
+      await storageRef.putFile(file, metadata);
+
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Save metadata to Firestore
+      await FirebaseFirestore.instance.collection('audio_files').add({
+        'file_name': fileName,
+        'url': downloadUrl,
+        'uploaded_at': FieldValue.serverTimestamp(),
+      });
+
+      print('***** UPLOAD SUCCESSFUL *****: $downloadUrl');
+    } catch (e, stackTrace) {
+      print('general error: $e');
+      print('stack trace:\n$stackTrace');
+    }
+  }
+
+  Future<void> _handleRecord() async {
     if (!_isRecording) {
       // start recording and reset progress
+
+      // uncomment when audio file is ready to be stored
+      // _path = await getAudioFilePath();
+      _path = 'flutter_sound.aac';
+      await _recorder.startRecorder(toFile: _path);
+
       setState(() {
         _isRecording = true;
         _progress = 0.0;
@@ -48,6 +119,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   }
 
   Future<void> _stopRecording() async {
+    await _recorder.stopRecorder();
+    setState(() => _isRecording = false);
+    if (_path != null) {
+      // await uploadAudioFile(_path!);
+      print("***** audio saved but not uploading yet *****");
+    }
+
+
     _recordTimer?.cancel();
     _recordTimer = null;
     setState(() {
@@ -75,10 +154,24 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     // Only navigate if the widget is still mounted after the delay.
     if (mounted) {
       Navigator.of(context).pushNamed(
-        '/student-word-feedback',
+        '/student-word-feedback', arguments: _path,
       );
     }
   }
+
+  Future<void> playRecording() async {
+    if (_path != null) {
+      await _player.startPlayer(fromURI: _path);
+    }
+  }
+
+  @override
+  void dispose() {
+    _recorder.closeRecorder();
+    _player.closePlayer();
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -302,11 +395,5 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _recordTimer?.cancel();
-    super.dispose();
   }
 }
