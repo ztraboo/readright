@@ -89,7 +89,7 @@ class AppStyles {
   // ----------------------------------
   static const TextStyle textFieldText = TextStyle(
     fontFamily: 'SF Compact Display',
-    fontSize: 26, 
+    fontSize: 18, 
     fontWeight: FontWeight.w400,
     color: Color(0xFF303030),
   );

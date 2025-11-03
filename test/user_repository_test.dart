@@ -180,20 +180,16 @@ void main() {
     });
 
     test('upsertCurrentUser saves document using auth uid', () async {
-      // Create a model without id (or with a different id) — repo should save using auth uid.
-      final input = UserModel.fromJson({
-        // intentionally omitting 'id' or providing a different id to ensure copyWith is applied
-        'email': 'new@example.com',
-        'fullName': 'New Name',
-      });
 
-      await repo.upsertCurrentUser(input);
+      // Insert current user document if it does not exist with role teacher
+      await repo.upsertCurrentUser(role: UserRole.teacher);
 
       final doc = await fakeFirestore.collection('users').doc(testUid).get();
       expect(doc.exists, isTrue);
       final data = doc.data()!;
-      expect(data['email'], equals('new@example.com'));
-      expect(data['fullName'], equals('New Name'));
+      expect(data['email'], equals('user@example.com'));
+      expect(data['fullName'], equals('Test User'));
+      expect(data['role'], equals('Teacher'));
       // id may or may not be present in the stored map depending on FirestoreMetadata.prepareForSave,
       // but the document key should be the auth uid which we checked via doc existence.
     });
