@@ -1,25 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'class/class_student_details_screen.dart';
 
 class TeacherDashboardPage extends StatelessWidget {
   const TeacherDashboardPage({super.key});
 
+  // Hardcoded teacher UID for now
+  final String teacherUid = 'u002';
+
+  Future<List<Map<String, dynamic>>> fetchStudents() async {
+    final classSnapshot = await FirebaseFirestore.instance
+        .collection('classes')
+        .where('teacherid', isEqualTo: teacherUid)
+        .get();
+
+    if (classSnapshot.docs.isEmpty) return [];
+
+    final classData = classSnapshot.docs.first.data();
+    final totalWords = classData['totalWords'] ?? 0;
+
+    final studentUids = <String>[];
+    if (classData.containsKey('students')) {
+      final studentsList = List<String>.from(classData['students']);
+      studentUids.addAll(studentsList);
+    }
+
+    if (studentUids.isEmpty) return [];
+
+    final studentSnapshot = await FirebaseFirestore.instance
+        .collection('students')
+        .where('uid', whereIn: studentUids)
+        .get();
+
+    final userSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('uid', whereIn: studentUids)
+        .get();
+
+    final uidToName = {
+      for (var doc in userSnapshot.docs) doc.data()['uid']: doc.data()['displayName']
+    };
+
+    return studentSnapshot.docs.map((doc) {
+      final data = doc.data();
+      final uid = data['uid'] ?? '';
+      return {
+        'uid': uid,
+        'displayName': uidToName[uid] ?? 'No Name',
+        'completed': data['completed'] ?? 0,
+        'totalWords': totalWords,
+      };
+    }).toList();
+  }
+
+  Future<Map<String, dynamic>> fetchClassDetails() async {
+    final classSnapshot = await FirebaseFirestore.instance
+        .collection('classes')
+        .where('teacherid', isEqualTo: teacherUid)
+        .limit(1)
+        .get();
+
+    if (classSnapshot.docs.isEmpty) return {};
+
+    final data = classSnapshot.docs.first.data();
+    return {
+      'classAverage': data['classAverage'] ?? 0.0,
+      'topStruggledWords': List<String>.from(data['topStruggledWords'] ?? []),
+      'classCode': data['classCode'] ?? '',
+      'totalWords': data['totalWords'] ?? 0,
+      'teacherId': data['teacherid'] ?? '',
+    };
+  }
+
+  Future<String> fetchTeacherName(String teacherId) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .where('uid', isEqualTo: teacherId)
+        .limit(1)
+        .get();
+    if (doc.docs.isEmpty) return 'Unknown';
+    return doc.docs.first.data()['displayName'] ?? 'Unknown';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Temporary student data
-    final students = [
-      {'name': 'Alice Johnson', 'progress': 0.85},
-      {'name': 'Ben Carter', 'progress': 0.62},
-      {'name': 'Chloe Davis', 'progress': 0.45},
-      {'name': 'David Kim', 'progress': 0.90},
-      {'name': 'Ella Brown', 'progress': 0.25},
-    ];
-
-    // Temporary class data
-    final double classAverage = 68.7;
-    final List<String> topStruggledWords = ['the', 'and', 'play'];
-    final String classCode = 'ENG101-AB';
-    final int wordCount = 42;
-
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -28,121 +92,89 @@ class TeacherDashboardPage extends StatelessWidget {
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.people), text: 'Students'),
-              Tab(icon: Icon(Icons.info_outline), text: 'Class Details'),
+              Tab(icon: Icon(Icons.info), text: 'Class Details'),
             ],
           ),
         ),
-
-        // Main content
         body: TabBarView(
           children: [
-            // ---------------- Students Tab ----------------
+            // Students Tab
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Students',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline),
-                        tooltip: 'Add Student',
-                        onPressed: () {
-                          // Add Functionality
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Search + Sort Row
+                  // Search + Sort
                   Row(
                     children: [
                       Expanded(
-                        child: SizedBox(
-                          height: 55,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search students...',
-                              prefixIcon: const Icon(Icons.search),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                            ),
-                            onChanged: null, // placeholder
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            hintText: 'Search students...',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(),
                           ),
+                          onChanged: null,
                         ),
                       ),
-                      const SizedBox(width: 12),
-
-                      // Sort Icon (Dropdown placeholder)
+                      const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.sort),
-                        tooltip: 'Sort Options',
-                        onPressed: () {
-                          showMenu(
-                            context: context,
-                            position: const RelativeRect.fromLTRB(200, 100, 0, 0),
-                            items: const [
-                              PopupMenuItem(
-                                value: 'name',
-                                child: Text('Sort by Name'),
-                              ),
-                              PopupMenuItem(
-                                value: 'time',
-                                child: Text('Sort by Time Completed'),
-                              ),
-                            ],
-                          );
-                        },
+                        onPressed: () {},
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 16),
-
                   // Student List
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: students.length,
-                      itemBuilder: (context, index) {
-                        final student = students[index];
-                        final name = student['name'] as String;
-                        final progress = student['progress'] as double;
-
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            title: Text(name),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 8),
-                                LinearProgressIndicator(
-                                  value: progress,
-                                  minHeight: 8,
-                                  borderRadius: BorderRadius.circular(10),
-                                  backgroundColor: Colors.grey[300],
-                                  color: Colors.green,
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: fetchStudents(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}'));
+                        }
+                        final students = snapshot.data ?? [];
+                        if (students.isEmpty) {
+                          return const Center(child: Text('No students found.'));
+                        }
+                        return ListView.builder(
+                          itemCount: students.length,
+                          itemBuilder: (context, index) {
+                            final student = students[index];
+                            final completed = student['completed'] ?? 0;
+                            final totalWords = student['totalWords'] ?? 0;
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              child: ListTile(
+                                title: Text(student['displayName']),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text('Words completed: $completed/$totalWords'),
+                                    const SizedBox(height: 4),
+                                    LinearProgressIndicator(
+                                      value: totalWords == 0 ? 0 : completed / totalWords,
+                                      minHeight: 8,
+                                      backgroundColor: Colors.grey[300],
+                                      color: Colors.green,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text('${(progress * 100).toStringAsFixed(0)}% complete'),
-                              ],
-                            ),
-                            trailing: const Icon(Icons.arrow_forward_ios),
-                            onTap: () {
-                              Navigator.pushNamed(context, '/class-student-details');
-                            },
-                          ),
+                                trailing: const Icon(Icons.arrow_forward),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ClassStudentDetails(studentUid: student['uid']),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         );
                       },
                     ),
@@ -151,83 +183,107 @@ class TeacherDashboardPage extends StatelessWidget {
               ),
             ),
 
-            // ---------------- Class Details Tab ----------------
-            SingleChildScrollView(
+            // Class Details Tab
+            Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Class Details',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const Divider(height: 24, thickness: 1),
-
-                  // Class Average
-                  const Text(
-                    'Class Average',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('${classAverage.toStringAsFixed(1)}%'),
-                  const Divider(height: 32, thickness: 1),
-
-                  // Top Struggled Words
-                  const Text(
-                    'Top Struggled Words',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Column(
+              child: FutureBuilder<Map<String, dynamic>>(
+                future: fetchClassDetails(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  final classData = snapshot.data ?? {};
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: topStruggledWords
-                        .map((word) => Text('• $word'))
-                        .toList(),
-                  ),
-                  const Divider(height: 32, thickness: 1),
+                    children: [
+                      // Teacher at top
+                      FutureBuilder<String>(
+                        future: fetchTeacherName(classData['teacherId'] ?? ''),
+                        builder: (context, teacherSnapshot) {
+                          final teacherName = teacherSnapshot.data ?? 'Loading...';
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Teacher',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(teacherName),
+                              const Divider(height: 32, thickness: 1),
+                            ],
+                          );
+                        },
+                      ),
 
-                  // Class Code
-                  const Text(
-                    'Class Code',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(classCode),
-                  const Divider(height: 32, thickness: 1),
+                      // Class Code
+                      Text(
+                        'Class Code',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(classData['classCode'] ?? ''),
+                      const Divider(height: 32, thickness: 1),
 
-                  // Word Count
-                  const Text(
-                    'Number of Words in Class List',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('$wordCount words'),
-                ],
+                      // Total Words
+                      Text(
+                        'Total Words',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${classData['totalWords'] ?? 0}'),
+                      const Divider(height: 32, thickness: 1),
+
+                      // Class Average
+                      Text(
+                        'Class Average',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${classData['classAverage'] ?? 0}%'),
+                      const Divider(height: 32, thickness: 1),
+
+                      // Top Struggled Words
+                      Text(
+                        'Top Struggled Words',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: (classData['topStruggledWords'] ?? [])
+                            .map<Widget>((w) => Text('• $w'))
+                            .toList(),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
-
-        // Floating button that stays at the bottom across tabs
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: SizedBox(
-          width: 280,
-          height: 50,
-          child: FloatingActionButton.extended(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            foregroundColor: Colors.black87,
-            elevation: 2,
-            onPressed: () {
-              Navigator.pushNamed(context, '/teacher-word-dashboard');
-            },
-            icon: const Icon(Icons.book),
-            label: const Text(
-              'Go to Word Dashboard',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              
-            ),
-          ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.pushNamed(context, '/teacher-word-dashboard');
+          },
+          icon: const Icon(Icons.book),
+          label: const Text('Word Dashboard'),
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
