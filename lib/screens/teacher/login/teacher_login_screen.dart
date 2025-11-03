@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:readright/models/user_model.dart';
 
 import '../../../services/user_repository.dart';
 import '../../../utils/app_colors.dart';
@@ -20,6 +21,8 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final PasswordPolicy firebaseAuthPasswordPolicy;
+  late final UserModel? userModel;
+  bool isVerifyingExistingLoginSession = true;
 
    @override
   void dispose() {
@@ -32,8 +35,27 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   void initState() {
     super.initState();
 
+    fetchUserModel().then((user) {
+      setState(() {
+        userModel = user;
+
+        if (userModel != null) {
+          // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
+          debugPrint('Restored user: ${userModel!.email}');
+          navigateToDashboard();
+        } else {
+          debugPrint('No persisted user found.');
+          isVerifyingExistingLoginSession = false;
+        }
+      });
+    });
+
     // Grab the latest password policy from Firebase Authentication via Cloud Functions
     fetchFirebaseAuthPasswordPolicy();
+  }
+
+  Future<UserModel?> fetchUserModel() async {
+    return await UserRepository().fetchCurrentUser();
   }
 
   void fetchFirebaseAuthPasswordPolicy() async {
@@ -48,6 +70,33 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: duration),
     );
+  }
+
+  void navigateToDashboard() async {
+      if (userModel != null) {
+        debugPrint('User signed in successfully: ${userModel!.email}');
+        _showSnackBar(
+          message: (userModel!.fullName.trim().isNotEmpty == true)
+            ? 'Sign in successful! Welcome back, ${userModel!.fullName}.'
+            : 'Sign in successful!',
+          duration: const Duration(seconds: 2)
+        );
+
+        /**********************************************************
+        Navigate to teacher dashboard after verifying login fields
+
+        The fields must still be filled because of the null check,
+        but any dummy values work for now
+        **********************************************************/
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/teacher-dashboard',
+          (Route<dynamic> route) => false,
+        );
+    } 
   }
 
   Future<void> _handleSignIn() async {
@@ -65,44 +114,20 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     // Verify credentials with Firebase Authentication here using the emailController.text and passwordController.text
     final fireBaseAuth = UserRepository();
 
-    final userCredentials = await fireBaseAuth.signInFirebaseEmailPasswordUser(
+    userModel = await fireBaseAuth.signInFirebaseEmailPasswordUser(
       email: emailController.text,
       securePassword: passwordController.text
     );
 
-    if (userCredentials != null) {
-      debugPrint('User signed in successfully: ${userCredentials.email}');
-      _showSnackBar(
-        message: (userCredentials.fullName.trim().isNotEmpty == true)
-          ? 'Sign in successful! Welcome back, ${userCredentials.fullName}.'
-          : 'Sign in successful!',
-        duration: const Duration(seconds: 2)
-      );
-
-      /**********************************************************
-      Navigate to teacher dashboard after verifying login fields
-
-      The fields must still be filled because of the null check,
-      but any dummy values work for now
-      **********************************************************/
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return;
-
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/teacher-dashboard',
-        (Route<dynamic> route) => false,
-      );
-
-    }
-    else {
-      debugPrint('Sign in failed for email: ${emailController.text}');
-      _showSnackBar(
-        message: 'Sign in failed. Please check your email and password.',
-        duration: const Duration(seconds: 3)
-      );
-      return;
-    }
+    navigateToDashboard();
+    
+    // Could not sign in, so we just need to show the error message.
+    debugPrint('Sign in failed for email: ${emailController.text}');
+    _showSnackBar(
+      message: 'Sign in failed. Please check your email and password.',
+      duration: const Duration(seconds: 3)
+    );
+    return;
     
   }
 
@@ -119,13 +144,15 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
         child: SingleChildScrollView(
           child: Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 46),
-                _buildBody(),
-              ],
-            ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 46),
+                  isVerifyingExistingLoginSession
+                    ? _buildVerifyingLoginSession()
+                    : _buildBody(),
+                ],
+              ),
           ),
         ),
       ),
@@ -177,6 +204,27 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
           ),
         ),
       );
+  }
+
+  // Displays a verifying login session progress indicator
+  // Occurs when checking for existing user session on this screen.
+  Widget _buildVerifyingLoginSession() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text(
+          'Verifying Login,',
+          style: AppStyles.headerText,
+        ),
+        const SizedBox(height: 22),
+        const Text(
+          "Checking for existing user session ...",
+          style: AppStyles.subheaderText,
+        ),
+        const SizedBox(height: 22),
+        CircularProgressIndicator()
+      ],
+    );
   }
 
   Widget _buildWelcomeSection() {
