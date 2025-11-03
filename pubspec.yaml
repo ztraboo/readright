@@ -39,6 +39,7 @@ dependencies:
   firebase_auth: ^6.1.1
   firebase_core: ^4.2.0
   cloud_firestore: ^6.0.3
+  cloud_functions: ^6.0.3
   crypto: ^3.0.2
 
   # dependencies for audio files

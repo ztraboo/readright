@@ -85,7 +85,7 @@ class ReaderSelectionPage extends StatelessWidget {
                         elevation: 5,
                       ),
                       child: Text(
-                        'INSTRUCTOR',
+                        'TEACHER',
                         style: AppStyles.buttonText,
                       ),
                     ),

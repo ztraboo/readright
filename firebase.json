@@ -1,1 +1,47 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"readright-2ad31","appId":"1:860505438253:android:6cf29a670d68848ef8e0a4","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"readright-2ad31","appId":"1:860505438253:ios:034dc00e7b7a1d3cf8e0a4","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"readright-2ad31","configurations":{"android":"1:860505438253:android:6cf29a670d68848ef8e0a4","ios":"1:860505438253:ios:034dc00e7b7a1d3cf8e0a4"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "readright-2ad31",
+          "appId": "1:860505438253:android:6cf29a670d68848ef8e0a4",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "readright-2ad31",
+          "appId": "1:860505438253:ios:034dc00e7b7a1d3cf8e0a4",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "readright-2ad31",
+          "configurations": {
+            "android": "1:860505438253:android:6cf29a670d68848ef8e0a4",
+            "ios": "1:860505438253:ios:034dc00e7b7a1d3cf8e0a4"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}

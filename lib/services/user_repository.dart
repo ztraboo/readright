@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:readright/models/user_model.dart';
+import 'package:readright/utils/enums.dart';
 import 'package:readright/utils/firestore_metadata.dart';
 
 /// Repository for managing user data in Firestore
@@ -117,7 +118,23 @@ class UserRepository {
       );
       final userUID = authResult.user?.uid;
       if (userUID != null) {
-        return fetchUserByUserUID(userUID);
+        UserModel? userModel = await fetchUserByUserUID(userUID);
+
+        // Exit early if we found the user document
+        if (userModel != null) {
+          return userModel;
+        }
+
+        // Create a new users document if not found based on the logged-in auth user
+        // And try to fetch the users document again.
+        try {
+          await upsertCurrentUser(role: UserRole.teacher);
+          
+          userModel = await fetchUserByUserUID(userUID);
+          return userModel;
+        } catch (e, st) {
+          debugPrint("Error creating user document after sign-in: ${e.toString()}\n$st");
+        }
       }
     } on FirebaseAuthException catch (e, st) {
       debugPrint("Auth signInWithEmailAndPassword failed: ${e.code} — ${e.message}\n$st");
@@ -137,13 +154,22 @@ class UserRepository {
   // Convenience: upsert the currently-signed-in user's document using
   // `FirebaseAuth.instance.currentUser?.uid` as the document id. If there
   // is no signed-in user this throws a [StateError].
-  Future<void> upsertCurrentUser(UserModel user) async {
+  Future<void> upsertCurrentUser({required UserRole role}) async {
     final current = _auth.currentUser;
     if (current == null) {
       throw StateError('No signed-in user available');
     }
     // Ensure the model uses the auth uid so the document key matches.
-    final toSave = user.copyWith(id: current.uid);
+    final toSave = UserModel(
+      id: current.uid,
+      email: current.email as String,
+      fullName: current.displayName ?? '',
+      role: role,
+      local: "en-US",
+      isEmailVerified: current.emailVerified,
+      verificationStatus: VerificationStatus.unknown,
+    );
+    //  user.copyWith(id: current.uid);
     
     debugPrint('Upserting current user with UID: ${toSave.id}');
     await upsertUser(toSave);
