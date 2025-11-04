@@ -47,10 +47,12 @@ dependencies:
   path_provider: ^2.1.2
   permission_handler: ^11.0.0
   firebase_storage: ^13.0.3
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  launcher_name: ^1.0.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -75,7 +77,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/icons/
-#    - assets/logos/
+    - assets/marketing/
     - assets/mascot/
     - data/
 
@@ -104,3 +106,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+launcher_name:
+  default: "ReadRight"
