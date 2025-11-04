@@ -344,8 +344,12 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     );
   }
 
-    Widget _buildPasswordField() {
-      return TextFormField(
+  // Toggle for password visibility
+  bool _obscurePassword = true;
+
+  Widget _buildPasswordField() {
+    return TextFormField(
+      obscureText: _obscurePassword,
       controller: passwordController,
       textInputAction: TextInputAction.done,
       style: AppStyles.textFieldText,
@@ -360,6 +364,18 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
             alignment: Alignment.centerLeft,
             semanticsLabel: 'Password Icon',
           ),
+        ),
+        // Visibility toggle
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: AppColors.textPrimaryGray.withOpacity(0.7),
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.zero),
