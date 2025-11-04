@@ -7,6 +7,7 @@ import 'package:readright/models/user_model.dart';
 import '../../../services/user_repository.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_styles.dart';
+import '../../../utils/enums.dart';
 import '../../../utils/fireauth_utils.dart';
 import '../../../utils/validators.dart';
 
@@ -36,18 +37,52 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   void initState() {
     super.initState();
 
+    // Check for existing user session on initialization
+    // If a user is already signed in, we can skip the login screen
     fetchUserModel().then((user) {
       setState(() {
         userModel = user;
 
         if (userModel != null) {
           // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
-          debugPrint('Restored user: ${userModel!.email}');
-          navigateToDashboard();
+
+          // Perform an additional check to ensure that this is not a
+          // student user logged in. We only want teachers.
+          switch (userModel!.role) {
+            case UserRole.teacher:
+              debugPrint('Restored user: ${userModel!.email}');
+              navigateToDashboard();
+              break;
+            case UserRole.student:
+              debugPrint('The teacher dashboard can only be accessed by teachers.');
+
+              _showSnackBar(
+                message: 'The teacher dashboard can only be accessed by teachers.',
+                duration: const Duration(seconds: 2),
+                bgColor: AppColors.bgPrimaryRed,
+              );
+
+              Future.delayed(const Duration(seconds: 3)).then((_) {
+                if (!mounted) return;
+                setState(() {
+                  // Traverse back to the reader selection screen
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/reader-selection',
+                    (Route<dynamic> route) => false,
+                  );
+
+                   isVerifyingExistingLoginSession = false;
+                });
+              });
+              
+              break;
+          }
+
         } else {
           debugPrint('No persisted user found.');
-          isVerifyingExistingLoginSession = false;
         }
+
       });
     });
 
