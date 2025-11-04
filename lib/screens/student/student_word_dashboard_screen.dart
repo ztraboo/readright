@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../services/user_repository.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
 
@@ -14,6 +15,23 @@ class StudentWordDashboardPage extends StatefulWidget {
 class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
   final Set<String> _selectedFilters = {'Sight Words', 'Minimal Pairs'};
   // final Set<String> _completedWords = {'away'};
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Verify that the user is logged into Firebase by checking the currentUser status.
+    UserRepository().fetchCurrentUser().then((user) {
+      if (user == null) {
+        debugPrint('StudentWordDashboardPage: No user is currently signed in.');
+        // Optionally, navigate to the login screen.
+      } else {
+        debugPrint('StudentWordDashboardPage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}');
+      }
+    }).catchError((error) {
+      debugPrint('Error fetching current user: $error');
+    });
+  }
 
   void _toggleFilter(String filter) {
     setState(() {

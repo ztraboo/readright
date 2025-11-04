@@ -121,6 +121,21 @@ void main() {
       expect(ids, containsAll(<String>{a.id!, b.id!}));
     });
 
+    test('fetchUserByUsername returns expected user when username exists', () async {
+      final user = sampleUser(id: 'u-username-1').copyWith(username: 'searchme');
+      await repo.upsertUser(user);
+
+      final fetched = await repo.fetchUserByUsername('searchme');
+      expect(fetched, isNotNull);
+      expect(fetched!.id, equals(user.id));
+      expect(fetched.username, equals('searchme'));
+    });
+
+    test('fetchUserByUsername returns null when username does not exist', () async {
+      final fetched = await repo.fetchUserByUsername('no-such-user');
+      expect(fetched, isNull);
+    });
+
     test('creating same id twice is handled deterministically', () async {
       final user = sampleUser(id: 'u-dup-1');
 

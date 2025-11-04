@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
+import 'package:readright/services/user_repository.dart';
 
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
 
 class StudentPasscodeVerificationPage extends StatefulWidget {
-  const StudentPasscodeVerificationPage({super.key});
+  final String? username;
+  final String? passcode;
+  final String? email;
+
+  const StudentPasscodeVerificationPage({super.key, this.username, this.passcode, this.email});
 
   @override
   State<StudentPasscodeVerificationPage> createState() =>
@@ -17,24 +22,70 @@ class _StudentPasscodeVerificationPageState
     extends State<StudentPasscodeVerificationPage> {
   String _passcode = '';
 
+  @override
+  void initState() {
+    super.initState();
+
+    debugPrint("StudentPasscodeVerificationPage: init with username ${widget.username}, passcode ${widget.passcode}");
+  }
+
+  void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: duration,
+        backgroundColor: bgColor ?? AppColors.bgPrimaryDarkGrey,
+      ),
+    );
+  }
+
   Future<void> _handleNext() async {
     if (_passcode.isEmpty || _passcode.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter the complete verification code'),
-        ),
+      _showSnackBar(
+        message: 'Please enter the complete verification code.',
+        duration: const Duration(seconds: 2),
+        bgColor: AppColors.bgPrimaryRed,
       );
       return;
     }
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Verifying passcode: $_passcode'),
-          duration: Duration(seconds: 2),
-        ),
+    _showSnackBar(
+      message: 'Verifying passcode: $_passcode',
+      duration: const Duration(seconds: 2),
+    );
+
+    // Check the passcode with Firebase to ensure it's valid.
+    if (widget.passcode == null || _passcode != widget.passcode) {
+      _showSnackBar(
+        message: 'Invalid verification code. Please try again.',
+        duration: const Duration(seconds: 2),
+        bgColor: AppColors.bgPrimaryRed,
       );
+      return;
+    }
+
+    // Authenticate the user using Firebase Authentication (Email/Password).
+    // TODO: We'll need to implement a better way to create and verify the password field.
+    // For now, the password for all students is "Testing123!".
+    try {
+      final userCredential = await UserRepository().signInFirebaseEmailPasswordUser(
+        email: widget.email!,
+        securePassword: 'Testing123!',
+      );
+      debugPrint('Signed in as ${userCredential?.username}');
+    } catch (e) {
+      debugPrint('Failed to sign in as ${widget.username}: $e');
+
+      _showSnackBar(
+        message: 'Authentication failed. Please try again later.',
+        duration: const Duration(seconds: 2),
+        bgColor: AppColors.bgPrimaryRed,
+      );
+      return;
+    } 
 
     await Future.delayed(const Duration(seconds: 3));
 
@@ -128,7 +179,7 @@ class _StudentPasscodeVerificationPageState
           style: AppStyles.headerText.copyWith(height: 1.40),
         ),
         const SizedBox(height: 22),
-        const Text(
+        Text(
           'Enter the verification code provided by your instructor.',
           style: AppStyles.subheaderText,
         ),

@@ -66,7 +66,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     firebaseAuthPasswordPolicy = await fetchPasswordPolicy();
   }
 
-   void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
+  void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

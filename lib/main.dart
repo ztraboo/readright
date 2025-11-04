@@ -50,7 +50,14 @@ class MyApp extends StatelessWidget {
         '/landing': (context) => const LandingPage(),
         '/reader-selection': (context) => const ReaderSelectionPage(),
         '/student-login': (context) => const StudentLoginPage(),
-        '/student-passcode-verification': (context) => const StudentPasscodeVerificationPage(),
+        '/student-passcode-verification': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          return StudentPasscodeVerificationPage(
+            username: args is Map ? args['username'] : null,
+            passcode: args is Map ? args['passcode'] : null,
+            email: args is Map ? args['email'] : null,
+          );
+        },
         '/student-word-dashboard': (context) => const StudentWordDashboardPage(),
         '/student-word-practice': (context) => const StudentWordPracticePage(),
         '/student-word-feedback': (context) => const StudentWordFeedbackPage(),
