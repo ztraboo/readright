@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -128,22 +129,25 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     // Verify credentials with Firebase Authentication here using the emailController.text and passwordController.text
     final fireBaseAuth = UserRepository();
 
-    userModel = await fireBaseAuth.signInFirebaseEmailPasswordUser(
-      email: emailController.text,
-      securePassword: passwordController.text
-    );
+    try {
+      userModel = await fireBaseAuth.signInFirebaseEmailPasswordUser(
+        email: emailController.text,
+        securePassword: passwordController.text
+      );
+    } on FirebaseException catch (e) {
+      // Could not sign in, so we just need to show the error message.
+      debugPrint('Sign in failed for email: ${emailController.text}, error: ${e.toString()}');
+      _showSnackBar(
+        message: 'Sign in failed. Please check your email and password.',
+        duration: const Duration(seconds: 3),
+        bgColor: AppColors.bgPrimaryRed,
+      );
+
+      // Exit early since sign-in failed to prevent navigating to teacher dashboard.
+      return;
+    }
 
     navigateToDashboard();
-    
-    // Could not sign in, so we just need to show the error message.
-    debugPrint('Sign in failed for email: ${emailController.text}');
-    _showSnackBar(
-      message: 'Sign in failed. Please check your email and password.',
-      duration: const Duration(seconds: 3),
-      bgColor: AppColors.bgPrimaryRed,
-    );
-    return;
-    
   }
 
   @override
