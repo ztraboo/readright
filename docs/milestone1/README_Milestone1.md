@@ -331,13 +331,17 @@ The following screens showcase teacher interfaces for the application:
 |:--:|:--:|
 | ![Login](./images/screen_teacher_login.png) | ![Registration](./images/screen_teacher_registration.png) |
 
-| Class Dashboard | Class Progress | Class Word List |
+<!-- | Class Dashboard | Class Progress | Class Word List |
 |:--:|:--:|:--:|
-| ![Login](./images/screen_teacher_class_dashboard.png) | ![Password Reset](./images/screen_teacher_class_progress.png) | ![Registration](./images/screen_teacher_class_word_list.png) |
+| ![Login](./images/screen_teacher_class_dashboard.png) | ![Password Reset](./images/screen_teacher_class_progress.png) | ![Registration](./images/screen_teacher_class_word_list.png) | -->
 
-| Student Details | Word Dashboard |
+| Teacher Dashboard (Student Progress) | Teacher Dashboard (Class Details) |
 |:--:|:--:|
-| ![Student Details](./images/screen_teacher_student_details.png) | ![Word Dashboard](./images/screen_teacher_word_dashboard.png) |
+| ![Login](./images/screen_teacher_class_progress.png) | ![Registration](./images/screen_teacher_class_details.png) |
+
+| Student Details | Word Dashboard (Edit) |
+|:--:|:--:|
+| ![Student Details](./images/screen_teacher_student_details.png) | ![Word Dashboard](./images/screen_teacher_word_dashboard_edit.png) |
 
 ### Student Flow
 The following screens showcase student interfaces for the application:
