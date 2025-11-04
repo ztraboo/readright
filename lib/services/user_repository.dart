@@ -49,6 +49,18 @@ class UserRepository {
     return null;
   }
 
+  // Fetch a user by their username from Firestore and lookup their FirebaseAuth UID
+  Future<UserModel?> fetchUserByUsername(String username) async {
+    final querySnapshot = await _db.collection('users')
+      .where('username', isEqualTo: username)
+      .limit(1)
+      .get();
+    if (querySnapshot.docs.isNotEmpty) {
+      return UserModel.fromJson(querySnapshot.docs.first.data());
+    }
+    return null;
+  }
+
   // Fetch all users from Firestore
   Future<List<UserModel>> listUsers() async {
     final snapshot = await _db.collection('users').get();

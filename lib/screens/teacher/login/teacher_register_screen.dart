@@ -41,7 +41,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
     firebaseAuthPasswordPolicy = await fetchPasswordPolicy();
   }
 
-   void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
+  void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -101,11 +101,10 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
     }
 
     // Create credentials with Firebase Authentication here using the controllers text completed by the user.
-    final fireBaseAuth = UserRepository();
 
     // Try to create the user with Firebase Authentication
     try {
-      userModel = await fireBaseAuth.createFirebaseEmailPasswordUser(
+      userModel = await UserRepository().createFirebaseEmailPasswordUser(
         user: UserModel(
           email: emailController.text,
           role: UserRole.teacher,
