@@ -81,9 +81,10 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
 
   // Navigate to the teacher login screen if the user taps "Sign In"
   void _handleSignIn() {
-    Navigator.pushNamed(
+    Navigator.pushNamedAndRemoveUntil(
       context,
       '/teacher-login',
+      (Route<dynamic> route) => false,
     );
   }
 

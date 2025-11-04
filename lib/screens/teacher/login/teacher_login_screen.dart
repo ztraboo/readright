@@ -107,9 +107,10 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
 
   // Navigate to the teacher registration screen if the user taps "Sign Up"
   void _handleSignUp() {
-    Navigator.pushNamed(
+    Navigator.pushNamedAndRemoveUntil(
       context,
       '/teacher-register',
+      (Route<dynamic> route) => false,
     );
   }
 
