@@ -126,34 +126,32 @@ class UserRepository {
 
   // Sign in an existing FirebaseAuth user with email and password.
   Future<UserModel?> signInFirebaseEmailPasswordUser({required String email, required String securePassword}) async {
-    try {
-      final authResult = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: securePassword,
-      );
-      final userUID = authResult.user?.uid;
-      if (userUID != null) {
-        UserModel? userModel = await fetchUserByUserUID(userUID);
+    
+    final authResult = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: securePassword,
+    );
+    final userUID = authResult.user?.uid;
+    if (userUID != null) {
+      UserModel? userModel = await fetchUserByUserUID(userUID);
 
-        // Exit early if we found the user document
-        if (userModel != null) {
-          return userModel;
-        }
-
-        // Create a new users document if not found based on the logged-in auth user
-        // And try to fetch the users document again.
-        try {
-          await upsertCurrentUser(role: UserRole.teacher);
-          
-          userModel = await fetchUserByUserUID(userUID);
-          return userModel;
-        } catch (e, st) {
-          debugPrint("Error creating user document after sign-in: ${e.toString()}\n$st");
-        }
+      // Exit early if we found the user document
+      if (userModel != null) {
+        return userModel;
       }
-    } on FirebaseAuthException catch (e, st) {
-      debugPrint("Auth signInWithEmailAndPassword failed: ${e.code} — ${e.message}\n$st");
+
+      // Create a new users document if not found based on the logged-in auth user
+      // And try to fetch the users document again.
+      try {
+        await upsertCurrentUser(role: UserRole.teacher);
+        
+        userModel = await fetchUserByUserUID(userUID);
+        return userModel;
+      } catch (e, st) {
+        debugPrint("Error creating user document after sign-in: ${e.toString()}\n$st");
+      }
     }
+
     return null;
   }
 
