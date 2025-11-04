@@ -115,13 +115,6 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
       return;
     }
 
-    if (userModelExists.role != UserRole.student) {
-      _showSnackBar(
-        message: 'The username "$username" is not registered as a student but that is fine for testing purposes.',
-        duration: const Duration(seconds: 2),
-      );
-    }
-
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 

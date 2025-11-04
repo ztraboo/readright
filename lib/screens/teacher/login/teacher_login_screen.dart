@@ -23,7 +23,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final PasswordPolicy firebaseAuthPasswordPolicy;
-  late final UserModel? userModel;
+  late UserModel? userModel;
   bool isVerifyingExistingLoginSession = true;
 
    @override
@@ -54,10 +54,10 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
               navigateToDashboard();
               break;
             case UserRole.student:
-              debugPrint('The teacher dashboard can only be accessed by teachers.');
+              debugPrint('This dashboard can only be accessed by teachers!');
 
               _showSnackBar(
-                message: 'The teacher dashboard can only be accessed by teachers.',
+                message: 'This dashboard can only be accessed by teachers!',
                 duration: const Duration(seconds: 2),
                 bgColor: AppColors.bgPrimaryRed,
               );
@@ -81,6 +81,19 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
 
         } else {
           debugPrint('No persisted user found.');
+
+          _showSnackBar(
+            message: 'No persisted user found.',
+            duration: const Duration(seconds: 2),
+            bgColor: AppColors.bgPrimaryRed,
+          );
+
+          Future.delayed(const Duration(seconds: 3)).then((_) {
+            if (!mounted) return;
+            setState(() {
+              isVerifyingExistingLoginSession = false;
+            });
+          });
         }
 
       });
