@@ -18,19 +18,25 @@ import 'screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
 
+import 'package:readright/services/user_repository.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Ensure no user is signed in at app start
+  await UserRepository().signOutCurrentUser();
+
+
   // Anonymous sign-in for development/testing
-  try {
-    final userCredential = await FirebaseAuth.instance.signInAnonymously();
-    debugPrint('Signed in anonymously as ${userCredential.user?.uid}');
-  } catch (e) {
-    debugPrint('Failed to sign in anonymously: $e');
-  }
+  // try {
+  //   final userCredential = await FirebaseAuth.instance.signInAnonymously();
+  //   debugPrint('Signed in anonymously as ${userCredential.user?.uid}');
+  // } catch (e) {
+  //   debugPrint('Failed to sign in anonymously: $e');
+  // }
 
   runApp(const MyApp());
 }
