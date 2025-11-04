@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../models/user_model.dart';
 import '../../services/user_repository.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
@@ -17,11 +18,39 @@ class StudentLoginPage extends StatefulWidget {
 class _StudentLoginPageState extends State<StudentLoginPage> {
   final TextEditingController usernameController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final UserModel? userModel;
+  bool isVerifyingExistingLoginSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Check for existing user session on initialization
+    // If a user is already signed in, we can skip the login screen
+    fetchUserModel().then((user) {
+        setState(() {
+          userModel = user;
+
+          if (userModel != null) {
+            // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
+            debugPrint('Restored user: ${userModel!.email}');
+            navigateToDashboard();
+          } else {
+            debugPrint('No persisted user found.');
+            isVerifyingExistingLoginSession = false;
+          }
+        });
+    });
+  }
 
   @override
   void dispose() {
     usernameController.dispose();
     super.dispose();
+  }
+
+  Future<UserModel?> fetchUserModel() async {
+    return await UserRepository().fetchCurrentUser();
   }
 
   void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
@@ -33,6 +62,34 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
         backgroundColor: bgColor ?? AppColors.bgPrimaryDarkGrey,
       ),
     );
+  }
+
+  void navigateToDashboard() async {
+      if (userModel != null) {
+        debugPrint('User signed in successfully: ${userModel!.email}');
+        _showSnackBar(
+          message: (userModel!.fullName.trim().isNotEmpty == true)
+            ? 'Sign in successful! Welcome back, ${userModel!.fullName}.'
+            : 'Sign in successful!',
+          duration: const Duration(seconds: 2),
+          bgColor: AppColors.bgPrimaryDarkGrey,
+       );
+
+        /**********************************************************
+        Navigate to teacher dashboard after verifying login fields
+
+        The fields must still be filled because of the null check,
+        but any dummy values work for now
+        **********************************************************/
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/student-word-dashboard',
+          (Route<dynamic> route) => false,
+        );
+    } 
   }
 
   Future<void> _handleSubmit() async {
@@ -80,6 +137,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
         'email': userModelExists.email,
       },
     );
+    
   }
 
   @override
@@ -99,7 +157,9 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
               children: [
                 _buildHeader(),
                 const SizedBox(height: 46),
-                _buildBody(),
+                isVerifyingExistingLoginSession
+                    ? _buildVerifyingLoginSession()
+                    : _buildBody(),
                 _buildYetiIllustration(),
               ],
             ),
@@ -153,6 +213,27 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // Displays a verifying login session progress indicator
+  // Occurs when checking for existing user session on this screen.
+  Widget _buildVerifyingLoginSession() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text(
+          'Verifying Login,',
+          style: AppStyles.headerText,
+        ),
+        const SizedBox(height: 22),
+        const Text(
+          "Checking for existing user session ...",
+          style: AppStyles.subheaderText,
+        ),
+        const SizedBox(height: 22),
+        CircularProgressIndicator()
+      ],
     );
   }
 
