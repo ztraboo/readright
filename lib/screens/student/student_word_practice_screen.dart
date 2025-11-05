@@ -14,6 +14,9 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart' as path;
+import '../../models/user_model.dart';
+import '../../services/user_repository.dart';
+
 
 
 class StudentWordPracticePage extends StatefulWidget {
@@ -31,6 +34,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
   String? _path;
+  // late final UserModel? userModel;
+  late String username;
 
   @override
   void initState() {
@@ -38,6 +43,18 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     _recorder.openRecorder();
     _player.openPlayer();
     _requestPermission();
+
+    UserRepository().fetchCurrentUser().then((user) {
+      if (user == null) {
+        debugPrint('StudentWordPracticePage: No user is currently signed in.');
+      } else {
+        debugPrint('StudentWordPracticePage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}');
+        username = user.username;
+      }
+    }).catchError((error) {
+      debugPrint('Error fetching current user: $error');
+    });
+
   }
 
   Future<void> _requestPermission() async {
@@ -47,13 +64,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   Future<String> getAudioFilePath() async {
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '${dir.path}/flutter_sound$timestamp.aac';
+    return '${dir.path}/$timestamp.aac';
   }
 
   Future<void> uploadAudioFile(String filePath) async {
     final file = File(filePath);
+
     final fileName = path.basename(filePath);
-    final storageRef = FirebaseStorage.instance.ref().child('audio/$fileName');
+    final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$fileName');
 
     try {
       print('Uploading file from: ${file.path}');
@@ -88,8 +106,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
       // start recording and reset progress
 
       // uncomment when audio file is ready to be stored
-      // _path = await getAudioFilePath();
-      _path = 'flutter_sound.aac';
+      _path = await getAudioFilePath();
+      // _path = 'flutter_sound.aac';
       await _recorder.startRecorder(toFile: _path);
 
       setState(() {
@@ -122,8 +140,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     await _recorder.stopRecorder();
     setState(() => _isRecording = false);
     if (_path != null) {
-      // await uploadAudioFile(_path!);
-      print("***** audio saved but not uploading yet *****");
+      await uploadAudioFile(_path!);
     }
 
 

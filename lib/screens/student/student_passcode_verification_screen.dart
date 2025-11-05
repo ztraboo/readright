@@ -188,33 +188,37 @@ class _StudentPasscodeVerificationPageState
   }
 
   Widget _buildOTPField() {
-    return OtpTextField(
-      numberOfFields: 6,
-      borderColor: AppColors.textPrimaryBlue,
-      focusedBorderColor: AppColors.bgPrimaryOrange,
-      fillColor: Colors.white,
-      filled: true,
-      showFieldAsBox: true,
-      borderWidth: 3.0,
-      enabledBorderColor: AppColors.textPrimaryBlue,
-      borderRadius: BorderRadius.circular(8),
-      fieldWidth: 50,
-      textStyle: const TextStyle(
-        fontFamily: 'SF Pro Display',
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        color: Colors.black,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: OtpTextField(
+        keyboardType: TextInputType.text,
+        numberOfFields: 6,
+        borderColor: AppColors.textPrimaryBlue,
+        focusedBorderColor: AppColors.bgPrimaryOrange,
+        fillColor: Colors.white,
+        filled: true,
+        showFieldAsBox: true,
+        borderWidth: 3.0,
+        enabledBorderColor: AppColors.textPrimaryBlue,
+        borderRadius: BorderRadius.circular(8),
+        fieldWidth: 45,
+        textStyle: const TextStyle(
+          fontFamily: 'SF Pro Display',
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+        ),
+        onCodeChanged: (String code) {
+          setState(() {
+            _passcode = code;
+          });
+        },
+        onSubmit: (String verificationCode) {
+          setState(() {
+            _passcode = verificationCode;
+          });
+        },
       ),
-      onCodeChanged: (String code) {
-        setState(() {
-          _passcode = code;
-        });
-      },
-      onSubmit: (String verificationCode) {
-        setState(() {
-          _passcode = verificationCode;
-        });
-      },
     );
   }
 
