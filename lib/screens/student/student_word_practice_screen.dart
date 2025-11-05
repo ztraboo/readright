@@ -16,6 +16,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart' as path;
 import '../../models/user_model.dart';
 import '../../services/user_repository.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 
 
@@ -36,6 +37,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   String? _path;
   // late final UserModel? userModel;
   late String username;
+  String? practice_word = 'cat';
+
+  final FlutterTts flutterTts = FlutterTts();
+
 
   @override
   void initState() {
@@ -71,7 +76,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     final file = File(filePath);
 
     final fileName = path.basename(filePath);
-    final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$fileName');
+    final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$practice_word/$fileName');
 
     try {
       print('Uploading file from: ${file.path}');
@@ -134,6 +139,13 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
       // stop early
       _stopRecording();
     }
+  }
+
+  Future <void> _handleTts(String word) async {
+    await flutterTts.setLanguage("en-US");
+    await flutterTts.setPitch(1);
+    await flutterTts.setSpeechRate(0.4);
+    await flutterTts.speak(word);
   }
 
   Future<void> _stopRecording() async {
@@ -206,7 +218,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
               const SizedBox(height: 0),
               _buildInstructions(),
               const SizedBox(height: 14),
-              _buildRecordButton(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildRecordButton(),
+                  const SizedBox(width: 20),
+                  _buildTtsButton(),
+                ],
+              ),
               const SizedBox(height: 20),
               _buildProgressBar(),
             ],
@@ -235,10 +254,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
               ),
             ),
             const SizedBox(height: 19),
-            const SizedBox(
+            SizedBox(
               width: 349,
               child: Text(
-                'cat',
+                '$practice_word',
                 textAlign: TextAlign.center,
                 style: AppStyles.headerText,
               ),
@@ -281,19 +300,19 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
             semanticsLabel: 'Quote Open',
           ),
           const SizedBox(width: 4),
-          const Flexible(
+          Flexible(
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
+                  const TextSpan(
                     text: 'The ',
                     style: AppStyles.subheaderText,
                   ),
                   TextSpan(
-                    text: 'cat',
+                    text: '$practice_word',
                     style: AppStyles.subheaderTextBold,
                   ),
-                  TextSpan(
+                  const TextSpan(
                     text: ' is sleeping on the bed.',
                     style: AppStyles.subheaderText,
                   ),
@@ -380,6 +399,18 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTtsButton() {
+    return IconButton(
+        icon: Icon(Icons.volume_up),
+        color: Colors.green,
+        iconSize:40,
+        tooltip: 'Play Example',
+        onPressed: () {
+          _handleTts('$practice_word');
+        }
     );
   }
 
