@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'class/class_student_details_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class TeacherDashboardPage extends StatelessWidget {
   const TeacherDashboardPage({super.key});
 
-  // Hardcoded teacher UID for now
-  final String teacherUid = 'u002';
+  // Get teacher uid
+  String get teacherUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
 
   Future<List<Map<String, dynamic>>> fetchStudents() async {
+
+    if (teacherUid.isEmpty) {
+      throw Exception('No teacher is currently signed in.');
+    }
+
     final classSnapshot = await FirebaseFirestore.instance
         .collection('classes')
         .where('teacherid', isEqualTo: teacherUid)
@@ -75,11 +83,11 @@ class TeacherDashboardPage extends StatelessWidget {
   Future<String> fetchTeacherName(String teacherId) async {
     final doc = await FirebaseFirestore.instance
         .collection('users')
-        .where('uid', isEqualTo: teacherId)
+        .where('id', isEqualTo: teacherId)
         .limit(1)
         .get();
     if (doc.docs.isEmpty) return 'Unknown';
-    return doc.docs.first.data()['displayName'] ?? 'Unknown';
+    return doc.docs.first.data()['fullName'] ?? 'Unknown';
   }
 
   @override
