@@ -41,8 +41,9 @@ class SeedWordsUploader {
 
       final text = fields.isNotEmpty ? fields[0].trim() : '';
       final category = fields.length > 1 ? fields[1].trim() : '';
-      final sentences = fields.length > 2
-          ? fields.sublist(2).map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+      final levelOrder = fields.length > 2 ? fields[2].trim() : 0;
+      final sentences = fields.length > 3
+          ? fields.sublist(3).map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
           : <String>[];
 
       if (text.isEmpty) {
@@ -55,6 +56,9 @@ class SeedWordsUploader {
 
       final word = WordModel(
         text: text,
+        levelOrder: levelOrder is int
+            ? levelOrder
+            : int.tryParse(levelOrder.toString()) ?? 0,
         level: level,
         sentences: sentences,
       );
@@ -84,9 +88,13 @@ class SeedWordsUploader {
   // Map CSV category strings (free-form) to WordLevel enum values.
   static WordLevel _mapCategoryToLevel(String category) {
     final c = category.toLowerCase();
-    if (c.contains('sight')) return WordLevel.sightWord;
-    if (c.contains('phon')) return WordLevel.phonicsPattern;
-    if (c.contains('minimal')) return WordLevel.minimalPairs;
+    if (c.contains('pre-primer')) return WordLevel.prePrimer;
+    if (c.contains('primer')) return WordLevel.primer;
+    if (c.contains('first')) return WordLevel.firstGrade;
+    if (c.contains('second')) return WordLevel.secondGrade;
+    if (c.contains('third')) return WordLevel.thirdGrade;
+    if (c.contains('fourth')) return WordLevel.fourthGrade;
+    if (c.contains('fifth')) return WordLevel.fifthGrade;
     return WordLevel.custom;
   }
 

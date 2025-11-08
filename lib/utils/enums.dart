@@ -1,18 +1,27 @@
 
-/// Enumeration for different word levels used in the application.
-/// ---------------------------------------------------------------
+// Enumeration for different word levels used in the application.
+// Keep the order of the enum values as is; they represent increasing difficulty/order. 
+// ---------------------------------------------------------------
 enum WordLevel {
-  sightWord,
-  phonicsPattern,
-  minimalPairs,
+  prePrimer,
+  primer,
+  firstGrade,
+  secondGrade,
+  thirdGrade,
+  fourthGrade,
+  fifthGrade,
   custom
 }
 
 extension WordCategoryExtension on WordLevel {
   String get name => switch (this) {
-      WordLevel.sightWord => 'Sight Word',
-      WordLevel.phonicsPattern => 'Phonics Pattern',
-      WordLevel.minimalPairs => 'Minimal Pairs',
+      WordLevel.prePrimer => 'Pre-Primer',
+      WordLevel.primer => 'Primer',
+      WordLevel.firstGrade => 'First Grade',
+      WordLevel.secondGrade => 'Second Grade',
+      WordLevel.thirdGrade => 'Third Grade',
+      WordLevel.fourthGrade => 'Fourth Grade',
+      WordLevel.fifthGrade => 'Fifth Grade',
       WordLevel.custom => 'Custom',
   };
 }
@@ -25,6 +34,12 @@ WordLevel wordLevelFromString(String level) {
     return WordLevel.custom;
   }
 } 
+
+// Order levels by their enum order
+// This should return levels by there increasing difficulty/order.
+List<WordLevel> fetchWordLevelsIncreasingDifficultyOrder() {
+  return WordLevel.values;
+}
 
 /// Enumeration for different users.
 /// ---------------------------------------------------------------

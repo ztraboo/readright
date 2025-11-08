@@ -8,31 +8,33 @@ void main() {
     test('constructor generates deterministic id from text+level', () {
       final m = WordModel(
         text: 'away',
-        level: WordLevel.sightWord,
+        level: WordLevel.prePrimer,
+        levelOrder: 3,
         sentences: [],
       );
 
-      final expected = FirestoreUtils.generateDeterministicWordId('away', WordLevel.sightWord.name);
+      final expected = FirestoreUtils.generateDeterministicWordId('away', WordLevel.prePrimer.name);
       expect(m.id, equals(expected));
     });
 
     test('same text+level produce same id', () {
-      final a = WordModel(text: 'blue', level: WordLevel.sightWord, sentences: []);
-      final b = WordModel(text: 'blue', level: WordLevel.sightWord, sentences: []);
+      final a = WordModel(text: 'blue', level: WordLevel.prePrimer, levelOrder: 5, sentences: []);
+      final b = WordModel(text: 'blue', level: WordLevel.prePrimer, levelOrder: 5, sentences: []);
       expect(a.id, equals(b.id));
     });
 
     test('different level produce different ids', () {
-      final a = WordModel(text: 'cat', level: WordLevel.phonicsPattern, sentences: []);
-      final b = WordModel(text: 'cat', level: WordLevel.sightWord, sentences: []);
+      final a = WordModel(text: 'will', level: WordLevel.primer, levelOrder: 50, sentences: []);
+      final b = WordModel(text: 'again', level: WordLevel.firstGrade, levelOrder: 2, sentences: []);
       expect(a.id, isNot(equals(b.id)));
     });
 
     test('fromJson uses provided id', () {
       final json = {
         'id': 'provided-id',
-        'text': 'test',
-        'level': WordLevel.sightWord.name,
+        'text': 'could',
+        'level': WordLevel.firstGrade.name,
+        'levelOrder': 8,
         'sentences': <String>[],
       };
       final m = WordModel.fromJson(json);
@@ -41,22 +43,24 @@ void main() {
 
     test('fromJson generates deterministic id when missing', () {
       final json = {
-        'text': 'always',
-        'level': WordLevel.sightWord.name,
+        'text': 'every',
+        'level': WordLevel.firstGrade.name,
+        'levelOrder': 9,
         'sentences': <String>[],
       };
       final m = WordModel.fromJson(json);
-      final expected = FirestoreUtils.generateDeterministicWordId('always', WordLevel.sightWord.name);
+      final expected = FirestoreUtils.generateDeterministicWordId('every', WordLevel.firstGrade.name);
       expect(m.id, equals(expected));
     });
 
     test('toJson roundtrip and copyWith', () {
-      final original = WordModel(text: 'want', level: WordLevel.sightWord, sentences: ['I want a cookie for dessert.','Do you want to play a game?','They want to go swimming today.']);
+      final original = WordModel(text: 'want', level: WordLevel.primer, levelOrder: 43, sentences: ['I want a cookie for dessert.','Do you want to play a game?','They want to go swimming today.']);
       final json = original.toJson();
       final fromJson = WordModel.fromJson(json);
 
       expect(fromJson.text, equals(original.text));
       expect(fromJson.level, equals(original.level));
+      expect(fromJson.levelOrder, equals(original.levelOrder));
       expect(fromJson.sentences, equals(original.sentences));
 
       final modified = original.copyWith(text: 'wanty');
