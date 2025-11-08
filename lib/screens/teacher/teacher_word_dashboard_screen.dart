@@ -6,11 +6,13 @@ import 'package:flutter/services.dart' show rootBundle;
 class CsvWord {
   final String word;
   final String category;
+  final int levelOrder;
   final List<String> sentences;
 
   CsvWord({
     required this.word,
     required this.category,
+    this.levelOrder = 0,
     required this.sentences,
   });
 
@@ -36,15 +38,18 @@ Future<Map<String, CsvWord>> loadCsv() async {
 
   for (var line in lines.skip(1)) {
     final pieces = _splitCsv(line);
-    if (pieces.length < 5) continue;
+    // Expect at least: Word, Category, LevelOrder
+    if (pieces.length < 3) continue;
 
     final word = pieces[0].trim();
     final category = pieces[1].trim();
-    final sentences = pieces.sublist(2).map((s) => s.trim()).toList();
+    final levelOrder = int.tryParse(pieces[2].trim()) ?? 0;
+    final sentences = pieces.length > 3 ? pieces.sublist(3).map((s) => s.trim()).toList() : <String>[];
 
     wordMap[word] = CsvWord(
       word: word,
       category: category,
+      levelOrder: levelOrder,
       sentences: sentences,
     );
   }

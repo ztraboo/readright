@@ -7,6 +7,7 @@ class WordModel {
   final String id;
   final String text;
   final WordLevel level;
+  final int levelOrder;
   final List<String> sentences;
 
   /// If [id] is omitted, a deterministic id from `text` and `levelName`. will be generated.
@@ -15,6 +16,7 @@ class WordModel {
     String? id,
     required this.text,
     required this.level,
+    required this.levelOrder,
     required this.sentences,
   }) : id = id ?? FirestoreUtils.generateDeterministicWordId(text, level.name); 
 
@@ -23,12 +25,14 @@ class WordModel {
     String? id,
     String? text,
     WordLevel? level,
+    int? levelOrder,
     List<String>? sentences,
   }) {
     return WordModel(
       // make sure id regenerates on content change; this is handled by the constructor.
       text: text ?? this.text,
       level: level ?? this.level,
+      levelOrder: levelOrder ?? this.levelOrder,
       sentences: sentences ?? this.sentences,
     );
   }
@@ -39,6 +43,7 @@ class WordModel {
       'id': id,
       'text': text,
       'level': level.name,
+      'levelOrder': levelOrder,
       'sentences': sentences.toList(),
     };
   }
@@ -48,6 +53,7 @@ class WordModel {
     return WordModel(
       id: (json['id'] as String?) ?? FirestoreUtils.generateDeterministicWordId(json['text'] as String, json['level'] as String),
       text: json['text'] as String,
+      levelOrder: json['levelOrder'] as int,
       level: WordLevel.values.firstWhere(   
         (e) => e.name == json['level'],
         orElse: () => WordLevel.custom,

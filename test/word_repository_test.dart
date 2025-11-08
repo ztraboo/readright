@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -32,16 +34,16 @@ void main() {
     });
 
     test('upsertWord and fetchWordById', () async {
-      final word = WordModel(text: 'test', level: WordLevel.sightWord, sentences: ['a']);
+      final word = WordModel(text: 'during', level: WordLevel.fourthGrade, levelOrder: 19, sentences: ['a']);
       await repo.upsertWord(word);
 
       final fetched = await repo.fetchWordById(word.id);
       expect(fetched, isNotNull);
-      expect(fetched!.text, equals('test'));
+      expect(fetched!.text, equals('during'));
     });
 
     test('addWordAutoId returns generated id and document contains it', () async {
-      final word = WordModel(text: 'auto', level: WordLevel.sightWord, sentences: []);
+      final word = WordModel(text: 'finally', level: WordLevel.fourthGrade, levelOrder: 23, sentences: []);
       final generatedId = await repo.addWordAutoId(word);
 
       final doc = await fakeFirestore.collection('words').doc(generatedId).get();
@@ -49,21 +51,27 @@ void main() {
       expect(doc.data()?['id'], equals(generatedId));
     });
 
-    test('fetchAllWords returns multiple entries', () async {
-      final a = WordModel(text: 'a', level: WordLevel.sightWord, sentences: []);
-      final b = WordModel(text: 'b', level: WordLevel.sightWord, sentences: []);
+    test('fetchLevelWords returns multiple entries ordered by levelOrder', () async {
+      final a = WordModel(text: 'gave', level: WordLevel.secondGrade, levelOrder: 17, sentences: []);
+      final b = WordModel(text: 'right', level: WordLevel.secondGrade, levelOrder: 27, sentences: []);
+      final c = WordModel(text: 'always', level: WordLevel.secondGrade, levelOrder: 1, sentences: []);
       await repo.upsertWord(a);
       await repo.upsertWord(b);
+      await repo.upsertWord(c);
 
-      final all = await repo.fetchAllWords();
-      expect(all.length, equals(2));
-      final texts = all.map((w) => w.text).toSet();
-      expect(texts.contains('a'), isTrue);
-      expect(texts.contains('b'), isTrue);
+      final all = await repo.fetchLevelWords(WordLevel.secondGrade);
+
+      // Check words are there and in the correct order ascending by levelOrder.
+      expect(all.length, equals(3));
+      expect(all[0].text, equals('always'));
+      expect(all[1].text, equals('gave'));
+      expect(all[2].text, equals('right'));
+      expect(all[0].levelOrder, lessThan(all[1].levelOrder));
+      expect(all[1].levelOrder, lessThan(all[2].levelOrder));
     });
 
     test('deleteWord removes the document', () async {
-      final w = WordModel(text: 'del', level: WordLevel.sightWord, sentences: []);
+      final w = WordModel(text: 'myself', level: WordLevel.thirdGrade, levelOrder: 26, sentences: []);
       await repo.upsertWord(w);
       await repo.deleteWord(w.id);
       final fetched = await repo.fetchWordById(w.id);

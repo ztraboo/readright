@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:readright/models/word_model.dart';
+import 'package:readright/utils/enums.dart';
 import 'package:readright/utils/firestore_metadata.dart';
 
 /// Repository for managing word data in Firestore
@@ -47,12 +48,15 @@ class WordRepository {
     return null;
   } 
 
-  // Fetch all words from Firestore
-  Future<List<WordModel>> fetchAllWords() async {
-    final querySnapshot = await _db.collection('words').get();
+  // Fetch level words from Firestore ordered by levelOrder ascending.
+  Future<List<WordModel>> fetchLevelWords(WordLevel level) async {
+    final querySnapshot = await _db.collection('words')
+      .where('level', isEqualTo: level.name)
+      .orderBy('levelOrder', descending: false)
+      .get();
     return querySnapshot.docs
-        .map((doc) => WordModel.fromJson(doc.data()))
-        .toList();
+      .map((doc) => WordModel.fromJson(doc.data()))
+      .toList();
   } 
 
   // Set or update a word in Firestore

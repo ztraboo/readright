@@ -6,9 +6,9 @@ import 'package:readright/utils/enums.dart';
 void main() {
   group('SeedWordsUploader', () {
     test('uploadFromString parses CSV and calls upsert for each word', () async {
-      final csv = '''Words,Category,Sentence 1,Sentence 2
-away,Sight Words,"Please go away","Don't go"
-blue,Sight Words,"Sky is blue","Blue hat"
+      final csv = '''Word,Category,LevelOrder,Sentence 1,Sentence 2
+away,Dolch Pre-Primer,3,"Please go away","Don't go"
+blue,Dolch Pre-Primer,5,"Sky is blue","Blue hat"
 ''';
       final saved = <WordModel>[];
       await SeedWordsUploader.uploadFromString(csv, upsertFn: (w) async {
@@ -18,17 +18,17 @@ blue,Sight Words,"Sky is blue","Blue hat"
       expect(saved.length, equals(2));
       expect(saved[0].text, equals('away'));
       expect(saved[0].sentences.length, equals(2));
-      expect(saved[0].level, equals(WordLevel.sightWord));
+      expect(saved[0].level, equals(WordLevel.prePrimer));
 
       expect(saved[1].text, equals('blue'));
       expect(saved[1].sentences.length, equals(2));
     });
 
     test('onProgress is called with correct counts', () async {
-      final csv = '''Words,Category
-one,Sight Words
-two,Sight Words
-three,Sight Words
+      final csv = '''Word,Category
+one,Dolch Pre-Primer
+two,Dolch Pre-Primer
+three,Dolch Pre-Primer
 ''';
       final calls = <int>[];
       await SeedWordsUploader.uploadFromString(csv, upsertFn: (w) async {}, onProgress: (i, total) {

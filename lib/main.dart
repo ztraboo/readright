@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:readright/utils/seed_words_uploader.dart';
 import 'firebase_options.dart';
 
 import 'screens/landing_screen.dart';
@@ -27,8 +28,16 @@ Future<void> main() async {
   );
 
   // Ensure no user is signed in at app start
-  await UserRepository().signOutCurrentUser();
+  // await UserRepository().signOutCurrentUser();
 
+  // Manually upload seed words from asset on app start
+  // We do this here to ensure it's done once when the app starts.
+  // This is a one-time operation; in a real app, you'd likely remove this after the initial upload.
+  // SeedWordsUploader.uploadFromAsset().then((_) {
+  //   debugPrint('Seed words upload completed.');
+  // }).catchError((e) {
+  //   debugPrint('Seed words upload failed: $e');
+  // });
 
   // Anonymous sign-in for development/testing
   // try {
