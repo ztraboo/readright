@@ -97,9 +97,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
         'file_name': fileName,
         'url': downloadUrl,
         'uploaded_at': FieldValue.serverTimestamp(),
+        // TODO: Add STT data here
       });
-
-      print('***** UPLOAD SUCCESSFUL *****: $downloadUrl');
     } catch (e, stackTrace) {
       print('general error: $e');
       print('stack trace:\n$stackTrace');
@@ -110,9 +109,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     if (!_isRecording) {
       // start recording and reset progress
 
-      // uncomment when audio file is ready to be stored
       _path = await getAudioFilePath();
-      // _path = 'flutter_sound.aac';
       await _recorder.startRecorder(toFile: _path);
 
       setState(() {
@@ -218,14 +215,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
               const SizedBox(height: 0),
               _buildInstructions(),
               const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildRecordButton(),
-                  const SizedBox(width: 20),
-                  _buildTtsButton(),
-                ],
-              ),
+              _buildRecordButton(),
               const SizedBox(height: 20),
               _buildProgressBar(),
             ],
@@ -254,13 +244,20 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
               ),
             ),
             const SizedBox(height: 19),
-            SizedBox(
-              width: 349,
-              child: Text(
-                '$practice_word',
-                textAlign: TextAlign.center,
-                style: AppStyles.headerText,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(width: 30),
+                SizedBox(
+                  child: Text(
+                    '$practice_word',
+                    textAlign: TextAlign.center,
+                    style: AppStyles.headerText,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _buildTtsButton(),
+              ],
             ),
             const SizedBox(height: 31),
           ],
