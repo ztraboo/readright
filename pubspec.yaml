@@ -45,13 +45,14 @@ dependencies:
   # dependencies for audio files
   flutter_sound: ^9.28.0
   path_provider: ^2.1.2
-  permission_handler: ^11.0.0
+  permission_handler: ^12.0.1
   firebase_storage: ^13.0.3
   flutter_launcher_icons: ^0.14.4
-  ffmpeg_kit_min_gpl: 6.0.3+2
+  ffmpeg_kit_flutter_new: ^4.1.0
 
   # text to speech
   flutter_tts: ^4.0.2
+  package_info_plus: ^9.0.0
 
 
 dev_dependencies:

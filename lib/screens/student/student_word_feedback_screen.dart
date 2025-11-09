@@ -36,11 +36,15 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
 
   Future<void> _handleReplay() async {
-    final path = ModalRoute.of(context)?.settings.arguments as String?;
-    if (path != null) {
-      await _player.openPlayer();
-      await _player.startPlayer(fromURI: path);
+    try {
+      final path = ModalRoute.of(context)?.settings.arguments as String?;
+      if (path != null) {
+        await _player.openPlayer();
+        await _player.startPlayer(fromURI: path);
 
+      }
+    } catch (e) {
+      debugPrint('Error playing audio: $e');
     }
   }
 
@@ -55,8 +59,10 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -89,7 +95,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 130,
+      height: 170,
       color: AppColors.bgPrimaryGray,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22),

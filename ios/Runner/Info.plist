@@ -28,6 +28,10 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+
+	<!-- Microphone usage description required to request microphone permission on iOS -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to the microphone to record student pronunciations for feedback and practice.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:readright/utils/seed_words_uploader.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
 import 'screens/landing_screen.dart';
@@ -19,7 +18,8 @@ import 'screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
 
-import 'package:readright/services/user_repository.dart';
+// import 'package:readright/services/user_repository.dart';
+// import 'package:readright/utils/seed_words_uploader.dart'
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

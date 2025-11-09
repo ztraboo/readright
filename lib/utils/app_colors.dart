@@ -20,4 +20,11 @@ class AppColors {
   static const Color buttonPrimaryBlue = Color(0xFF7498C4);
   static const Color buttonPrimaryOrange = Color(0xFFF0695B);
   static const Color buttonSecondaryRed = Color(0xFFFF3939);
+
+  // Progress indicator colors
+  // ----------------------------------
+  static const Color progressMicrophoneBackground = Color(0xFFCBE2F9);
+  static const Color progressMicrophoneDecibel = Color.fromARGB(255, 88, 116, 150);
+  static const Color progressMicrophoneFrame = Color(0xFFD9D9D9);
+
 }
