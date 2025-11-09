@@ -48,9 +48,11 @@ dependencies:
   permission_handler: ^11.0.0
   firebase_storage: ^13.0.3
   flutter_launcher_icons: ^0.14.4
+  ffmpeg_kit_min_gpl: 6.0.3+2
 
   # text to speech
   flutter_tts: ^4.0.2
+
 
 dev_dependencies:
   flutter_test:

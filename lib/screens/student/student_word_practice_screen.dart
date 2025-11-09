@@ -17,6 +17,8 @@ import 'package:path/path.dart' as path;
 import '../../models/user_model.dart';
 import '../../services/user_repository.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:ffmpeg_kit_min_gpl/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_min_gpl/return_code.dart';
 
 
 
@@ -45,9 +47,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   @override
   void initState() {
     super.initState();
+    _requestPermission();
     _recorder.openRecorder();
     _player.openPlayer();
-    _requestPermission();
 
     UserRepository().fetchCurrentUser().then((user) {
       if (user == null) {
@@ -66,12 +68,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     await Permission.microphone.request();
   }
 
-  Future<String> getAudioFilePath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '${dir.path}/$timestamp.aac';
-  }
-
   Future<void> uploadAudioFile(String filePath) async {
     final file = File(filePath);
 
@@ -81,7 +77,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     try {
       print('Uploading file from: ${file.path}');
 
-      if (!file.existsSync()) {
+      if (! await file.exists()) {
         print('File does not exist at: ${file.path}');
         return;
       }
@@ -105,12 +101,22 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     }
   }
 
+  Future<String> getAudioFilePath({String ext = 'aac'}) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return '${dir.path}/$timestamp.$ext';
+  }
+
   Future<void> _handleRecord() async {
     if (!_isRecording) {
-      // start recording and reset progress
-
+      // get path and start recorder
       _path = await getAudioFilePath();
-      await _recorder.startRecorder(toFile: _path);
+      try {
+        await _recorder.startRecorder(toFile: _path);
+      } catch (e, st) {
+        print('debug: Failed to start recorder: $e\n$st');
+        return;
+      }
 
       setState(() {
         _isRecording = true;
@@ -118,23 +124,119 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
         _msElapsed = 0;
       });
 
-      // update every 100ms for smoother progress
       const tickMs = 100;
       _recordTimer = Timer.periodic(const Duration(milliseconds: tickMs), (t) {
         _msElapsed += tickMs;
         final newProgress = (_msElapsed / 7000).clamp(0.0, 1.0);
-        setState(() {
-          _progress = newProgress;
-        });
+        setState(() => _progress = newProgress);
 
-        if (_msElapsed >= 7000) {
-          // reached max duration
-          _stopRecording();
-        }
+        if (_msElapsed >= 7000) _stopRecording();
       });
     } else {
-      // stop early
-      _stopRecording();
+      await _stopRecording();
+    }
+  }
+
+
+  Future<void> _stopRecording() async {
+    if (!_isRecording && (_recordTimer == null || !_recordTimer!.isActive)) {
+      return;
+    }
+
+    setState(() => _isRecording = false);
+
+    String? recordedPath;
+    try {
+      final result = await _recorder.stopRecorder();
+      recordedPath = result ?? _path;
+    } catch (e, st) {
+      print('debug: stopRecorder threw: $e\n$st');
+      recordedPath = _path;
+    }
+
+    if (recordedPath == null) {
+      print('debug: No recorded file path available after stopping recorder.');
+      _recordTimer?.cancel();
+      _recordTimer = null;
+      setState(() {
+        _progress = 0.0;
+        _msElapsed = 0;
+      });
+      return;
+    }
+
+    String uploadPath = recordedPath;
+
+    // convert only if the file exists and looks like AAC
+    try {
+      final file = File(recordedPath);
+      if (await file.exists() && recordedPath.toLowerCase().endsWith('.aac')) {
+        try {
+          uploadPath = await convertAacToWav(recordedPath);
+          print("debug: uploadPath updated");
+        } catch (e, st) {
+          print('debug: Conversion to WAV failed: $e\n$st -- will upload AAC as fallback.');
+          uploadPath = recordedPath;
+        }
+      } else if (!await file.exists()) {
+        print('debug: Recorded file does not exist at: $recordedPath');
+        return;
+      }
+    } catch (e, st) {
+      print('debug: Error while checking/converting file: $e\n$st');
+    }
+
+    // upload final path
+    try {
+      await uploadAudioFile(uploadPath);
+      print("debug: upload path successfully uploaded: $uploadPath");
+    } catch (e, st) {
+      print('debug: uploadAudioFile failed: $e\n$st');
+    }
+
+    _recordTimer?.cancel();
+    _recordTimer = null;
+
+    setState(() {
+      _progress = (_msElapsed >= 7000) ? 1.0 : 0.0;
+      _msElapsed = 0;
+      _isRecording = false;
+    });
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Verifying recording quality...'), duration: Duration(seconds: 2)));
+
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    // Pass the final uploaded path (wav if converted, otherwise original)
+    Navigator.of(context).pushNamed('/student-word-feedback', arguments: uploadPath);
+  }
+
+
+
+  Future<String> convertAacToWav(String aacPath) async {
+    print("debug: path coming into converter: $aacPath");
+    final wavPath = aacPath.replaceAll(RegExp(r'\.aac$', caseSensitive: false), '.wav');
+    final cmd = '-y -i "$aacPath" -ar 16000 -ac 1 -acodec pcm_s16le "$wavPath"';
+
+    final session = await FFmpegKit.execute(cmd);
+    final returnCode = await session.getReturnCode();
+
+    if (ReturnCode.isSuccess(returnCode)) {
+      print("debug: path coming out of converter: $wavPath");
+      return wavPath;
+    } else {
+      final failStackTrace = await session.getFailStackTrace();
+      throw Exception('debug: FFmpeg conversion failed: $returnCode $failStackTrace');
+    }
+  }
+
+
+  Future<void> playRecording() async {
+    if (_path != null) {
+      await _player.startPlayer(fromURI: _path);
     }
   }
 
@@ -143,52 +245,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     await flutterTts.setPitch(1);
     await flutterTts.setSpeechRate(0.4);
     await flutterTts.speak(word);
-  }
-
-  Future<void> _stopRecording() async {
-    await _recorder.stopRecorder();
-    setState(() => _isRecording = false);
-    if (_path != null) {
-      await uploadAudioFile(_path!);
-    }
-
-
-    _recordTimer?.cancel();
-    _recordTimer = null;
-    setState(() {
-      _isRecording = false;
-      if (_msElapsed >= 7000) {
-        _progress = 1.0;
-      } else {
-        // stopped early: reset progress
-        _progress = 0.0;
-      }
-      _msElapsed = 0;
-    });
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Verifying recording quality...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-    await Future.delayed(const Duration(seconds: 3));
-    // if (!mounted) return;
-    // Only navigate if the widget is still mounted after the delay.
-    if (mounted) {
-      Navigator.of(context).pushNamed(
-        '/student-word-feedback', arguments: _path,
-      );
-    }
-  }
-
-  Future<void> playRecording() async {
-    if (_path != null) {
-      await _player.startPlayer(fromURI: _path);
-    }
   }
 
   @override
