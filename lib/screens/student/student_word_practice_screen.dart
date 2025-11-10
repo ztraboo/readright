@@ -40,7 +40,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
 
   // late final UserModel? userModel;
   late String username;
-  String? practice_word = 'cat';
+  String? practiceWord = 'cat';
 
   final FlutterTts flutterTts = FlutterTts();
 
@@ -152,7 +152,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
     final file = File(filePath);
 
     final fileName = path.basename(filePath);
-    final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$practice_word/$fileName');
+    final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$practiceWord/$fileName');
 
     try {
       debugPrint('Uploading file from: ${file.path}');
@@ -184,7 +184,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
   Future<String> getAudioFilePath({String ext = 'aac'}) async {
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '${dir.path}/${username}_${practice_word}_$timestamp.$ext';
+    return '${dir.path}/${username}_${practiceWord}_$timestamp.$ext';
   }
 
   Future<void> _handleRecord() async {
@@ -443,7 +443,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
                 const SizedBox(width: 30),
                 SizedBox(
                   child: Text(
-                    '$practice_word',
+                    '$practiceWord',
                     textAlign: TextAlign.center,
                     style: AppStyles.headerText,
                   ),
@@ -605,25 +605,25 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
     );
   }
 
-  Widget _buildReplayButton() {
-    return GestureDetector(
-      onTap: playRecording,
-      child: Container(
-        height: 48,
-        width: 160,
-        decoration: BoxDecoration(
-          color: AppColors.buttonSecondaryRed,
-          borderRadius: BorderRadius.circular(1000),
-        ),
-        child: const Center(
-          child: Text(
-            'REPLAY',
-            style: AppStyles.buttonText,
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildReplayButton() {
+  //   return GestureDetector(
+  //     onTap: playRecording,
+  //     child: Container(
+  //       height: 48,
+  //       width: 160,
+  //       decoration: BoxDecoration(
+  //         color: AppColors.buttonSecondaryRed,
+  //         borderRadius: BorderRadius.circular(1000),
+  //       ),
+  //       child: const Center(
+  //         child: Text(
+  //           'REPLAY',
+  //           style: AppStyles.buttonText,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildMicrophoneDecibelLevelIndicator() {
     // Get current dB level from recorder
@@ -686,7 +686,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
         iconSize:40,
         tooltip: 'Play Example',
         onPressed: () {
-          _handleTts('$practice_word');
+          _handleTts('$practiceWord');
         }
     );
   }

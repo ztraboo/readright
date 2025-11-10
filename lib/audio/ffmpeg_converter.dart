@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
 
 /// Small helpers that wrap FFmpegKit commands for common audio conversions.
 /// These are intentionally simple, throwing on failure and returning the

@@ -7,10 +7,10 @@ PODS:
     - Firebase/Functions (= 12.4.0)
     - firebase_core
     - Flutter
-  - ffmpeg_kit_flutter_new (1.0.0):
-    - ffmpeg_kit_flutter_new/full-gpl (= 1.0.0)
+  - ffmpeg_kit_flutter_new_audio (7.1.1):
+    - ffmpeg_kit_flutter_new_audio/audio (= 7.1.1)
     - Flutter
-  - ffmpeg_kit_flutter_new/full-gpl (1.0.0):
+  - ffmpeg_kit_flutter_new_audio/audio (7.1.1):
     - Flutter
   - Firebase/Auth (12.4.0):
     - Firebase/CoreOnly
@@ -141,7 +141,7 @@ PODS:
 DEPENDENCIES:
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - cloud_functions (from `.symlinks/plugins/cloud_functions/ios`)
-  - ffmpeg_kit_flutter_new (from `.symlinks/plugins/ffmpeg_kit_flutter_new/ios`)
+  - ffmpeg_kit_flutter_new_audio (from `.symlinks/plugins/ffmpeg_kit_flutter_new_audio/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_storage (from `.symlinks/plugins/firebase_storage/ios`)
@@ -184,8 +184,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/cloud_firestore/ios"
   cloud_functions:
     :path: ".symlinks/plugins/cloud_functions/ios"
-  ffmpeg_kit_flutter_new:
-    :path: ".symlinks/plugins/ffmpeg_kit_flutter_new/ios"
+  ffmpeg_kit_flutter_new_audio:
+    :path: ".symlinks/plugins/ffmpeg_kit_flutter_new_audio/ios"
   firebase_auth:
     :path: ".symlinks/plugins/firebase_auth/ios"
   firebase_core:
@@ -216,7 +216,7 @@ CHECKOUT OPTIONS:
 SPEC CHECKSUMS:
   cloud_firestore: 7a6d8a533ec7418a7fe46b3a5dabf55661a5b298
   cloud_functions: 56bcd60d299724f6366c2d95b706a003f0badcca
-  ffmpeg_kit_flutter_new: 12426a19f10ac81186c67c6ebc4717f8f4364b7f
+  ffmpeg_kit_flutter_new_audio: 96938651839bda1fedaf527b7279ba8624b70335
   Firebase: f07b15ae5a6ec0f93713e30b923d9970d144af3e
   firebase_auth: 9225db04db5d8e3b46dc8940e04bc6aec6833e27
   firebase_core: f1aafb21c14f497e5498f7ffc4dc63cbb52b2594

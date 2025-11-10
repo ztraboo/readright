@@ -8,7 +8,8 @@ import 'screens/reader_selection_screen.dart';
 import 'screens/student/student_login_screen.dart';
 import 'screens/student/student_passcode_verification_screen.dart';
 import 'screens/student/student_word_dashboard_screen.dart';
-import 'screens/student/student_word_practice_screen.dart';
+// Defer loading the heavy student practice screen (it pulls in FFmpeg).
+import 'screens/student/student_word_practice_screen.dart' deferred as student_practice;
 import 'screens/student/student_word_feedback_screen.dart';
 import 'screens/teacher/login/teacher_login_screen.dart';
 import 'screens/teacher/login/teacher_register_screen.dart';
@@ -23,9 +24,10 @@ import 'screens/teacher/class/class_dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Defer Firebase initialization so the app can render its first frame
+  // faster. Firebase will initialize in the background after runApp().
+  // Note: code that depends on Firebase being initialized should either
+  // await initialization or handle the uninitialized state.
 
   // Ensure no user is signed in at app start
   // await UserRepository().signOutCurrentUser();
@@ -48,6 +50,20 @@ Future<void> main() async {
   // }
 
   runApp(const MyApp());
+
+  // Initialize Firebase asynchronously after the app has started to
+  // reduce blocking work on startup. This avoids waiting on native
+  // plugin initialization before the first frame is drawn.
+  Future<void>(() async {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('Firebase initialized');
+    } catch (e, st) {
+      debugPrint('Firebase initialization failed: $e\n$st');
+    }
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -74,7 +90,17 @@ class MyApp extends StatelessWidget {
           );
         },
         '/student-word-dashboard': (context) => const StudentWordDashboardPage(),
-        '/student-word-practice': (context) => const StudentWordPracticePage(),
+        '/student-word-practice': (context) => FutureBuilder<void>(
+              future: student_practice.loadLibrary(),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.done) {
+                  return student_practice.StudentWordPracticePage();
+                }
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              },
+            ),
         '/student-word-feedback': (context) => const StudentWordFeedbackPage(),
         '/teacher-login': (context) => const TeacherLoginPage(),
         '/teacher-register': (context) => const TeacherRegisterPage(),
