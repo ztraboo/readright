@@ -278,29 +278,29 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
-  Widget _buildInstructions() {
-    return Container(
-      width: double.infinity,
-      height: 86,
-      padding: const EdgeInsets.all(10),
-      child: const Center(
-        child: SizedBox(
-          width: 360,
-          child: Text(
-            'Click retry to try this word again or dashboard to return to the practice word list.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'SF Compact Display',
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-              color: Colors.black,
-              height: 1.375,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildInstructions() {
+  //   return Container(
+  //     width: double.infinity,
+  //     height: 86,
+  //     padding: const EdgeInsets.all(10),
+  //     child: const Center(
+  //       child: SizedBox(
+  //         width: 360,
+  //         child: Text(
+  //           'Click retry to try this word again or dashboard to return to the practice word list.',
+  //           textAlign: TextAlign.center,
+  //           style: TextStyle(
+  //             fontFamily: 'SF Compact Display',
+  //             fontSize: 16,
+  //             fontWeight: FontWeight.w400,
+  //             color: Colors.black,
+  //             height: 1.375,
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildRetryButton() {
     return GestureDetector(
