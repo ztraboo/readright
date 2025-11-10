@@ -1,26 +1,29 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:flutter_svg/flutter_svg.dart';
-
-import '../../utils/app_colors.dart';
-import '../../utils/app_styles.dart';
-
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_sound/flutter_sound.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:path/path.dart' as path;
-import '../../models/user_model.dart';
-import '../../services/user_repository.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:ffmpeg_kit_min_gpl/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_min_gpl/return_code.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
+import 'package:readright/audio/stream/pcm_player.dart';
+import 'package:readright/audio/stream/pcm_recorder.dart';
+import 'package:readright/audio/stream/wav_writer.dart';
+import 'package:permission_handler/permission_handler.dart';
+// import 'package:readright/models/user_model.dart';
+import 'package:readright/services/user_repository.dart';
+import 'package:readright/utils/app_colors.dart';
+import 'package:readright/utils/app_styles.dart';
+// FFmpeg helpers centralized in audio utilities
+import 'package:readright/audio/ffmpeg_converter.dart';
+
+// import 'package:flutter_sound/flutter_sound.dart';
+// import 'package:permission_handler/permission_handler.dart';
 
 class StudentWordPracticePage extends StatefulWidget {
   const StudentWordPracticePage({super.key});
@@ -29,27 +32,37 @@ class StudentWordPracticePage extends StatefulWidget {
   State<StudentWordPracticePage> createState() => _StudentWordPracticePageState();
 }
 
-class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
+class _StudentWordPracticePageState extends State<StudentWordPracticePage> with WidgetsBindingObserver {
   double _progress = 0.0;
+  bool _isProcessingRecording = false;
   bool _isRecording = false;
   Timer? _recordTimer;
   int _msElapsed = 0; // milliseconds elapsed during recording
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
-  String? _path;
+
   // late final UserModel? userModel;
   late String username;
   String? practice_word = 'cat';
 
   final FlutterTts flutterTts = FlutterTts();
 
+  // PCM player for playing back recorded audio.
+  final PcmPlayer _pcmPlayer = PcmPlayer();
+
+  // PCM recorder for live recording/streaming. We instantiate but don't start
+  // until permission has been checked/confirmed.
+  final PcmRecorder _pcmRecorder = PcmRecorder();
 
   @override
   void initState() {
     super.initState();
-    _requestPermission();
-    _recorder.openRecorder();
-    _player.openPlayer();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Initialize the PCM player now. The recorder will manage microphone
+    // permission and initialize itself on start().
+    _pcmPlayer.init();
+
+    // Check to see if the recorder has permissions for the microphone.
+    checkRecorderPermission();
 
     UserRepository().fetchCurrentUser().then((user) {
       if (user == null) {
@@ -62,10 +75,78 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
       debugPrint('Error fetching current user: $error');
     });
 
+    username = 'unknown';
+
   }
 
-  Future<void> _requestPermission() async {
-    await Permission.microphone.request();
+  // Explicit check/request microphone permission for the recorder.
+  // Open up app settings if permanently denied to enable Privacy settings for microphone for this app.
+  Future<void> checkRecorderPermission() async {
+    try {
+      final perm = await _pcmRecorder.checkAndRequestPermission();
+      // checkAndRequestPermission now handles UI for permanentlyDenied (dialogs/openSettings).
+      // Here we only abort if permission was not granted.
+      debugPrint('Microphone permission status: $perm');
+      if (perm == PermissionStatus.permanentlyDenied) {
+
+        // Build a show dialog to inform user to open settings if they
+        // clicked "Don't Allow" on initial prompt.
+
+        final open = await showDialog<bool>(
+          // ignore: use_build_context_synchronously
+          context: context,
+          builder: (ctx) => Platform.isIOS
+              ? CupertinoAlertDialog(
+                  title: const Text(
+                    '"ReadRight" Microphone Permission Required',
+                  ),
+                  content: const Text(
+                    'Microphone access is permanently denied. Open Settings to allow access for the app.',
+                  ),
+                  actions: [
+                    CupertinoDialogAction(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    CupertinoDialogAction(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      isDefaultAction: true,
+                      child: const Text('Open Settings'),
+                    ),
+                  ],
+                )
+              : AlertDialog(
+                  backgroundColor: const Color(
+                    0xFFFAFAFA,
+                  ), // slightly lighter background
+                  title: const Text('Microphone permission required'),
+                  content: const Text(
+                    'Microphone access is permanently denied. Open Settings to allow access for the \'ReadRight\' app.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: const Text('Open Settings'),
+                    ),
+                  ],
+                ),
+        );
+        if (open == true) {
+          await openAppSettings();
+        }
+      }        
+    } catch (e) {
+      debugPrint('Permission check error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Error checking microphone permission: $e')));
+      return;
+    }
   }
 
   Future<void> uploadAudioFile(String filePath) async {
@@ -75,10 +156,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$practice_word/$fileName');
 
     try {
-      print('Uploading file from: ${file.path}');
+      debugPrint('Uploading file from: ${file.path}');
 
-      if (! await file.exists()) {
-        print('File does not exist at: ${file.path}');
+      if (!file.existsSync()) {
+        debugPrint('File does not exist at: ${file.path}');
         return;
       }
 
@@ -96,25 +177,39 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
         // TODO: Add STT data here
       });
     } catch (e, stackTrace) {
-      print('general error: $e');
-      print('stack trace:\n$stackTrace');
+      debugPrint('general error: $e');
+      debugPrint('stack trace:\n$stackTrace');
     }
   }
 
   Future<String> getAudioFilePath({String ext = 'aac'}) async {
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '${dir.path}/$timestamp.$ext';
+    return '${dir.path}/${username}_${practice_word}_$timestamp.$ext';
   }
 
   Future<void> _handleRecord() async {
+    // prevent multiple taps while processing
+    if (_isProcessingRecording) return;
+
     if (!_isRecording) {
-      // get path and start recorder
-      _path = await getAudioFilePath();
+      // Before starting a recording, explicitly check/request microphone permission
+      // try {
+      final perm = await _pcmRecorder.getPermissionStatus();
+      if (perm != PermissionStatus.granted) {
+        await checkRecorderPermission();
+        return;
+      }
+
+      // Permission granted: start recording and reset progress
       try {
-        await _recorder.startRecorder(toFile: _path);
-      } catch (e, st) {
-        print('debug: Failed to start recorder: $e\n$st');
+        await _pcmRecorder.start(sampleRate: 16000, numChannels: 1, bufferToMemory: true);
+      } catch (e) {
+        debugPrint('Failed to start recorder: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Failed to start recorder: $e')));
         return;
       }
 
@@ -133,65 +228,76 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
         if (_msElapsed >= 7000) _stopRecording();
       });
     } else {
-      await _stopRecording();
+      // stop early: stop the pcm recorder and then update UI
+      try {
+        await _pcmRecorder.stop();
+      } catch (e) {
+        debugPrint('Error stopping recorder: $e');
+      }
+      _stopRecording();
     }
   }
-
 
   Future<void> _stopRecording() async {
     if (!_isRecording && (_recordTimer == null || !_recordTimer!.isActive)) {
       return;
     }
+    // Make sure the states for processing and recording are set
+    setState(() { 
+      _isProcessingRecording = true;
+      _isRecording = false;
+    });
 
-    setState(() => _isRecording = false);
+    String? uploadPath;
 
-    String? recordedPath;
-    try {
-      final result = await _recorder.stopRecorder();
-      recordedPath = result ?? _path;
-    } catch (e, st) {
-      print('debug: stopRecorder threw: $e\n$st');
-      recordedPath = _path;
-    }
+    await _pcmRecorder.stop();
 
-    if (recordedPath == null) {
-      print('debug: No recorded file path available after stopping recorder.');
-      _recordTimer?.cancel();
-      _recordTimer = null;
-      setState(() {
-        _progress = 0.0;
-        _msElapsed = 0;
-      });
-      return;
-    }
+    // Save buffered PCM bytes and encode to WAV and AAC using FFmpeg.
+    // Write raw PCM to a temp file, ask FFmpeg to create WAV, then AAC.
+    final pcmBytes = _pcmRecorder.getBufferedPcmBytes();
+    if (pcmBytes.isNotEmpty) {
+      // Create a raw PCM file on disk first.
+      final pcmPath = await getAudioFilePath(ext: 'pcm');
+      final pcmFile = File(pcmPath);
+      await pcmFile.writeAsBytes(pcmBytes);
 
-    String uploadPath = recordedPath;
+    // Create WAV from raw PCM using FFmpeg. Use `path` helper to reliably
+    // swap the extension (avoids regex edge-cases where replace may fail).
+    final wavPath = path.setExtension(pcmPath, '.wav');
+      try {
+        await FfmpegConverter.convertPcmToWav(pcmPath, wavPath, sampleRate: 16000);
 
-    // convert only if the file exists and looks like AAC
-    try {
-      final file = File(recordedPath);
-      if (await file.exists() && recordedPath.toLowerCase().endsWith('.aac')) {
+      // Target AAC path (same basename, .aac extension)
+      final aacPath = path.setExtension(pcmPath, '.aac');
+
         try {
-          uploadPath = await convertAacToWav(recordedPath);
-          print("debug: uploadPath updated");
-        } catch (e, st) {
-          print('debug: Conversion to WAV failed: $e\n$st -- will upload AAC as fallback.');
-          uploadPath = recordedPath;
+          // Prefer direct conversion from PCM -> AAC to avoid unnecessary WAV intermediate.
+          await FfmpegConverter.convertPcmToAac(pcmPath, aacPath);
+          await uploadAudioFile(aacPath);
+          uploadPath = aacPath;
+      } catch (e, st) {
+        debugPrint('PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV');
+        try {
+          await uploadAudioFile(wavPath);
+          uploadPath = wavPath;
+        } catch (e3, st3) {
+          debugPrint('Fallback upload (WAV) also failed: $e3\n$st3');
         }
-      } else if (!await file.exists()) {
-        print('debug: Recorded file does not exist at: $recordedPath');
-        return;
       }
     } catch (e, st) {
-      print('debug: Error while checking/converting file: $e\n$st');
+      debugPrint('PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC');
     }
 
-    // upload final path
+    // Cleanup temp files for PCM and WAV. AAC is kept for upload.
     try {
-      await uploadAudioFile(uploadPath);
-      print("debug: upload path successfully uploaded: $uploadPath");
-    } catch (e, st) {
-      print('debug: uploadAudioFile failed: $e\n$st');
+      if (await pcmFile.exists()) await pcmFile.delete();
+        final wavFile = File(wavPath);
+        if (await wavFile.exists() && uploadPath != wavPath) await wavFile.delete();
+      } catch (e) {
+        debugPrint('Failed to delete temp files: $e');
+      }
+    } else {
+      debugPrint('No PCM bytes available to save after recording.');
     }
 
     _recordTimer?.cancel();
@@ -203,41 +309,47 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
       _isRecording = false;
     });
 
+    // If we were unable to upload any audio file, show an error and abort.
+    if (uploadPath == null) {
+      debugPrint('No audio file was uploaded due to previous errors.');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Recording failed to process. Please try again.')));
+      setState(() {
+        _isProcessingRecording = false;
+      });
+      return;
+    }
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(const SnackBar(content: Text('Verifying recording quality...'), duration: Duration(seconds: 2)));
 
     await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
 
     // Pass the final uploaded path (wav if converted, otherwise original)
+    if (!mounted) return;
     Navigator.of(context).pushNamed('/student-word-feedback', arguments: uploadPath);
-  }
 
-
-
-  Future<String> convertAacToWav(String aacPath) async {
-    print("debug: path coming into converter: $aacPath");
-    final wavPath = aacPath.replaceAll(RegExp(r'\.aac$', caseSensitive: false), '.wav');
-    final cmd = '-y -i "$aacPath" -ar 16000 -ac 1 -acodec pcm_s16le "$wavPath"';
-
-    final session = await FFmpegKit.execute(cmd);
-    final returnCode = await session.getReturnCode();
-
-    if (ReturnCode.isSuccess(returnCode)) {
-      print("debug: path coming out of converter: $wavPath");
-      return wavPath;
-    } else {
-      final failStackTrace = await session.getFailStackTrace();
-      throw Exception('debug: FFmpeg conversion failed: $returnCode $failStackTrace');
-    }
+    // Reset the processing recording state after a short delay.
+    // This will allow the user to record again.
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      _isProcessingRecording = false;
+    });
   }
 
 
   Future<void> playRecording() async {
-    if (_path != null) {
-      await _player.startPlayer(fromURI: _path);
-    }
+    debugPrint('playRecording called');
+
+    // Play the buffered PCM data for playback to the user.
+    _pcmPlayer.playBufferedPcm(
+      _pcmRecorder.getBufferedPcmBytes(),
+      sampleRate: 16000
+    );
   }
 
   Future <void> _handleTts(String word) async {
@@ -249,8 +361,22 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
 
   @override
   void dispose() {
-    _recorder.closeRecorder();
-    _player.closePlayer();
+    WidgetsBinding.instance.removeObserver(this);
+
+    // dispose audio recorder
+    try {
+      _pcmRecorder.dispose();
+    } catch (e) {
+      debugPrint('Error disposing pcm recorder: $e');
+    }
+
+    // dispose audio player
+    try {
+      _pcmPlayer.dispose();
+    } catch (e) {
+      debugPrint('Error disposing pcm player: $e');
+    }
+
     super.dispose();
   }
 
@@ -258,8 +384,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -267,13 +395,23 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
               const SizedBox(height: 19),
               _buildYetiIllustration(),
               const SizedBox(height: 18),
-              _buildSentenceSection(),
-              const SizedBox(height: 0),
+              // _buildSentenceSection(),
+              // const SizedBox(height: 0),
               _buildInstructions(),
-              const SizedBox(height: 14),
-              _buildRecordButton(),
-              const SizedBox(height: 20),
-              _buildProgressBar(),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildRecordButton(),
+
+                  // Only used for testing REPLAY on this screen for
+                  // debugging purposes with the audio stream.
+                  // const SizedBox(width: 20),
+                  // _buildReplayButton()
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildMicrophoneDecibelLevelIndicator(),
             ],
           ),
         ),
@@ -284,7 +422,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 130,
+      height: 200,
       color: AppColors.bgPrimaryGray,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -315,7 +453,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
                 _buildTtsButton(),
               ],
             ),
-            const SizedBox(height: 31),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -334,63 +472,66 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     );
   }
 
-  Widget _buildSentenceSection() {
-    return Container(
-      width: double.infinity,
-      height: 77,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFC6C0).withOpacity(0.20),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SvgPicture.asset(
-            'assets/icons/quote-open-editor-svgrepo-com.svg',
-            width: 23,
-            height: 23,
-            semanticsLabel: 'Quote Open',
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(
-                    text: 'The ',
-                    style: AppStyles.subheaderText,
-                  ),
-                  TextSpan(
-                    text: '$practice_word',
-                    style: AppStyles.subheaderTextBold,
-                  ),
-                  const TextSpan(
-                    text: ' is sleeping on the bed.',
-                    style: AppStyles.subheaderText,
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(width: 4),
-          SvgPicture.asset(
-            'assets/icons/quote-close-editor-svgrepo-com.svg',
-            width: 23,
-            height: 23,
-            semanticsLabel: 'Quote Close',
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildSentenceSection() {
+  //   return Container(
+  //     width: double.infinity,
+  //     height: 77,
+  //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+  //     decoration: BoxDecoration(
+  //       color: const Color(0xFFFFC6C0).withOpacity(0.20),
+  //     ),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.center,
+  //       crossAxisAlignment: CrossAxisAlignment.center,
+  //       children: [
+  //         SvgPicture.asset(
+  //           'assets/icons/quote-open-editor-svgrepo-com.svg',
+  //           width: 23,
+  //           height: 23,
+  //           semanticsLabel: 'Quote Open',
+  //         ),
+  //         const SizedBox(width: 4),
+  //         Flexible(
+  //           child: Text.rich(
+  //             TextSpan(
+  //               children: [
+  //                 const TextSpan(
+  //                   text: 'The ',
+  //                   style: AppStyles.subheaderText,
+  //                 ),
+  //                 TextSpan(
+  //                   text: '$practice_word',
+  //                   style: AppStyles.subheaderTextBold,
+  //                 ),
+  //                 const TextSpan(
+  //                   text: ' is sleeping on the bed.',
+  //                   style: AppStyles.subheaderText,
+  //                 ),
+  //               ],
+  //             ),
+  //             textAlign: TextAlign.center,
+  //           ),
+  //         ),
+  //         const SizedBox(width: 4),
+  //         SvgPicture.asset(
+  //           'assets/icons/quote-close-editor-svgrepo-com.svg',
+  //           width: 23,
+  //           height: 23,
+  //           semanticsLabel: 'Quote Close',
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildInstructions() {
     return Container(
       width: double.infinity,
       height: 86,
       padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC6C0).withOpacity(0.20),
+      ),
       child: const Center(
           child: SizedBox(
           width: 349,
@@ -420,35 +561,119 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-            child: _isRecording
-                ? Row(
-                    key: const ValueKey('recording'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          value: _progress > 0 ? _progress : null,
-                          strokeWidth: 2.2,
-                          color: Colors.white,
+            child: 
+              _isProcessingRecording
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: Colors.white,
+                    ),
+                  )
+                : _isRecording
+                  ? Row(
+                      key: const ValueKey('recording'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            value: _progress > 0 ? _progress : null,
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        remaining > 0 ? 'STOP • ${remaining}s' : 'STOP',
+                        const SizedBox(width: 8),
+                        Text(
+                          remaining > 0 ? 'STOP • ${remaining}s' : 'STOP',
+                          style: AppStyles.buttonText,
+                        ),
+                      ],
+                    )
+                  : Container(
+                      key: const ValueKey('idle'),
+                      child: const Text(
+                        'RECORD',
+                        // use AppStyles.buttonText via DefaultTextStyle? apply directly
                         style: AppStyles.buttonText,
                       ),
-                    ],
-                  )
-                : Container(
-                    key: const ValueKey('idle'),
-                    child: const Text(
-                      'RECORD',
-                      // use AppStyles.buttonText via DefaultTextStyle? apply directly
-                      style: AppStyles.buttonText,
                     ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReplayButton() {
+    return GestureDetector(
+      onTap: playRecording,
+      child: Container(
+        height: 48,
+        width: 160,
+        decoration: BoxDecoration(
+          color: AppColors.buttonSecondaryRed,
+          borderRadius: BorderRadius.circular(1000),
+        ),
+        child: const Center(
+          child: Text(
+            'REPLAY',
+            style: AppStyles.buttonText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMicrophoneDecibelLevelIndicator() {
+    // Get current dB level from recorder
+    final dbLevel = _pcmRecorder.dbLevel;
+
+    // Map dB level to a 0.0 - 1.0 range for UI representation.
+    // Assuming typical microphone levels range from -60 dB (quiet) to 0 dB (loud).
+    final normalizedLevel = (dbLevel / 60).clamp(0.0, 1.0);
+
+    return Container(
+      width: double.infinity,
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Center(
+        child: Container(
+          width: double.infinity,
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.progressMicrophoneFrame.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Always show the microphone icon to the left of the progress bar.
+              SvgPicture.asset(
+                'assets/icons/microphone-3-svgrepo-com.svg',
+                width: 24,
+                height: 24,
+                semanticsLabel: 'Microphone',
+              ),
+              const SizedBox(width: 12),
+              // Progress bar expands to fill remaining space.
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    minHeight: 12,
+                    // Guard value into 0.0..1.0 range.
+                    value: normalizedLevel,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.progressMicrophoneDecibel,
+                    ),
+                    backgroundColor: AppColors.progressMicrophoneBackground,
                   ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -467,34 +692,4 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> {
     );
   }
 
-  Widget _buildProgressBar() {
-    return Container(
-      width: double.infinity,
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Center(
-        child: Container(
-          width: double.infinity,
-          height: 6,
-          decoration: BoxDecoration(
-            color: const Color(0xFF787878).withOpacity(0.20),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: FractionallySizedBox(
-              widthFactor: _progress,
-              child: Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0088FF),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
