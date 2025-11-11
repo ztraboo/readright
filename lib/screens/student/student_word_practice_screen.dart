@@ -18,8 +18,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
-// FFmpeg helpers centralized in audio utilities
-import 'package:readright/audio/ffmpeg_converter.dart';
+// Audio converter helpers centralized in audio utilities
+import 'package:readright/audio/audio_converter.dart';
 
 // import 'package:flutter_sound/flutter_sound.dart';
 // import 'package:permission_handler/permission_handler.dart';
@@ -28,10 +28,12 @@ class StudentWordPracticePage extends StatefulWidget {
   const StudentWordPracticePage({super.key});
 
   @override
-  State<StudentWordPracticePage> createState() => _StudentWordPracticePageState();
+  State<StudentWordPracticePage> createState() =>
+      _StudentWordPracticePageState();
 }
 
-class _StudentWordPracticePageState extends State<StudentWordPracticePage> with WidgetsBindingObserver {
+class _StudentWordPracticePageState extends State<StudentWordPracticePage>
+    with WidgetsBindingObserver {
   double _progress = 0.0;
   bool _isProcessingRecording = false;
   bool _isRecording = false;
@@ -63,19 +65,25 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
     // Check to see if the recorder has permissions for the microphone.
     checkRecorderPermission();
 
-    UserRepository().fetchCurrentUser().then((user) {
-      if (user == null) {
-        debugPrint('StudentWordPracticePage: No user is currently signed in.');
-      } else {
-        debugPrint('StudentWordPracticePage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}');
-        username = user.username;
-      }
-    }).catchError((error) {
-      debugPrint('Error fetching current user: $error');
-    });
+    UserRepository()
+        .fetchCurrentUser()
+        .then((user) {
+          if (user == null) {
+            debugPrint(
+              'StudentWordPracticePage: No user is currently signed in.',
+            );
+          } else {
+            debugPrint(
+              'StudentWordPracticePage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}',
+            );
+            username = user.username;
+          }
+        })
+        .catchError((error) {
+          debugPrint('Error fetching current user: $error');
+        });
 
     username = 'unknown';
-
   }
 
   // Explicit check/request microphone permission for the recorder.
@@ -87,7 +95,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
       // Here we only abort if permission was not granted.
       debugPrint('Microphone permission status: $perm');
       if (perm == PermissionStatus.permanentlyDenied) {
-
         // Build a show dialog to inform user to open settings if they
         // clicked "Don't Allow" on initial prompt.
 
@@ -137,13 +144,15 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
         if (open == true) {
           await openAppSettings();
         }
-      }        
+      }
     } catch (e) {
       debugPrint('Permission check error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('Error checking microphone permission: $e')));
+        ..showSnackBar(
+          SnackBar(content: Text('Error checking microphone permission: $e')),
+        );
       return;
     }
   }
@@ -152,7 +161,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
     final file = File(filePath);
 
     final fileName = path.basename(filePath);
-    final storageRef = FirebaseStorage.instance.ref().child('audio/$username/$practiceWord/$fileName');
+    final storageRef = FirebaseStorage.instance.ref().child(
+      'audio/$username/$practiceWord/$fileName',
+    );
 
     try {
       debugPrint('Uploading file from: ${file.path}');
@@ -188,35 +199,53 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
   }
 
   Future<void> _handleRecord() async {
+    debugPrint('_handledRecord pressed ...');
+
     // prevent multiple taps while processing
     if (_isProcessingRecording) return;
 
     if (!_isRecording) {
-      // Before starting a recording, explicitly check/request microphone permission
-      // try {
-      final perm = await _pcmRecorder.getPermissionStatus();
-      if (perm != PermissionStatus.granted) {
-        await checkRecorderPermission();
-        return;
-      }
+      debugPrint('Starting recording...');
 
-      // Permission granted: start recording and reset progress
-      try {
-        await _pcmRecorder.start(sampleRate: 16000, numChannels: 1, bufferToMemory: true);
-      } catch (e) {
-        debugPrint('Failed to start recorder: $e');
-        if (!mounted) return;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Failed to start recorder: $e')));
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _isRecording = true;
         _progress = 0.0;
         _msElapsed = 0;
       });
+
+      // Before starting a recording, explicitly check/request microphone permission
+      // try {
+      final perm = await _pcmRecorder.getPermissionStatus();
+      if (perm != PermissionStatus.granted) {
+        await checkRecorderPermission();
+
+        // Make sure the states for processing and recording are set
+        setState(() {
+          _isProcessingRecording = true;
+          _isRecording = false;
+        });
+
+        return;
+      }
+
+      // Permission granted: start recording and reset progress
+      try {
+        await _pcmRecorder.start(
+          sampleRate: 16000,
+          numChannels: 1,
+          bufferToMemory: true,
+        );
+      } catch (e) {
+        debugPrint('Failed to start recorder: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text('Failed to start recorder: $e')),
+          );
+        return;
+      }
 
       const tickMs = 100;
       _recordTimer = Timer.periodic(const Duration(milliseconds: tickMs), (t) {
@@ -233,23 +262,27 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
       } catch (e) {
         debugPrint('Error stopping recorder: $e');
       }
-      _stopRecording();
+
     }
   }
 
   Future<void> _stopRecording() async {
-    if (!_isRecording && (_recordTimer == null || !_recordTimer!.isActive)) {
-      return;
-    }
+    debugPrint('_stopRecording pressed...');
+
+    await _pcmRecorder.stop();
+
     // Make sure the states for processing and recording are set
-    setState(() { 
-      _isProcessingRecording = true;
+    setState(() {
+      _recordTimer?.cancel();
+      _recordTimer = null;
+
+      _progress = (_msElapsed >= 7000) ? 1.0 : 0.0;
+      _msElapsed = 0;
       _isRecording = false;
+      _isProcessingRecording = true;
     });
 
     String? uploadPath;
-
-    await _pcmRecorder.stop();
 
     // Save buffered PCM bytes and encode to WAV and AAC using FFmpeg.
     // Write raw PCM to a temp file, ask FFmpeg to create WAV, then AAC.
@@ -260,38 +293,48 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
       final pcmFile = File(pcmPath);
       await pcmFile.writeAsBytes(pcmBytes);
 
-    // Create WAV from raw PCM using FFmpeg. Use `path` helper to reliably
-    // swap the extension (avoids regex edge-cases where replace may fail).
-    final wavPath = path.setExtension(pcmPath, '.wav');
+      // Create WAV from raw PCM using FFmpeg. Use `path` helper to reliably
+      // swap the extension (avoids regex edge-cases where replace may fail).
+      final wavPath = path.setExtension(pcmPath, '.wav');
       try {
-        await FfmpegConverter.convertPcmToWav(pcmPath, wavPath, sampleRate: 16000);
+        await AudioConverter.convertPcmToWav(
+          pcmPath,
+          wavPath,
+          sampleRate: 16000,
+        );
 
-      // Target AAC path (same basename, .aac extension)
-      final aacPath = path.setExtension(pcmPath, '.aac');
+        // Target AAC path (same basename, .aac extension)
+        final aacPath = path.setExtension(pcmPath, '.aac');
 
         try {
           // Prefer direct conversion from PCM -> AAC to avoid unnecessary WAV intermediate.
-          await FfmpegConverter.convertPcmToAac(pcmPath, aacPath);
+          await AudioConverter.convertPcmToAac(pcmPath, aacPath);
           await uploadAudioFile(aacPath);
           uploadPath = aacPath;
-      } catch (e, st) {
-        debugPrint('PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV');
-        try {
-          await uploadAudioFile(wavPath);
-          uploadPath = wavPath;
-        } catch (e3, st3) {
-          debugPrint('Fallback upload (WAV) also failed: $e3\n$st3');
+        } catch (e, st) {
+          debugPrint(
+            'PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV',
+          );
+          try {
+            await uploadAudioFile(wavPath);
+            uploadPath = wavPath;
+          } catch (e3, st3) {
+            debugPrint('Fallback upload (WAV) also failed: $e3\n$st3');
+          }
         }
+      } catch (e, st) {
+        debugPrint(
+          'PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC',
+        );
       }
-    } catch (e, st) {
-      debugPrint('PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC');
-    }
 
-    // Cleanup temp files for PCM and WAV. AAC is kept for upload.
-    try {
-      if (await pcmFile.exists()) await pcmFile.delete();
+      // Cleanup temp files for PCM and WAV. AAC is kept for upload.
+      try {
+        if (await pcmFile.exists()) await pcmFile.delete();
         final wavFile = File(wavPath);
-        if (await wavFile.exists() && uploadPath != wavPath) await wavFile.delete();
+        if (await wavFile.exists() && uploadPath != wavPath) {
+          await wavFile.delete();
+        }
       } catch (e) {
         debugPrint('Failed to delete temp files: $e');
       }
@@ -299,22 +342,17 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
       debugPrint('No PCM bytes available to save after recording.');
     }
 
-    _recordTimer?.cancel();
-    _recordTimer = null;
-
-    setState(() {
-      _progress = (_msElapsed >= 7000) ? 1.0 : 0.0;
-      _msElapsed = 0;
-      _isRecording = false;
-    });
-
     // If we were unable to upload any audio file, show an error and abort.
     if (uploadPath == null) {
       debugPrint('No audio file was uploaded due to previous errors.');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('Recording failed to process. Please try again.')));
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Recording failed to save. Please try again.'),
+          ),
+        );
       setState(() {
         _isProcessingRecording = false;
       });
@@ -324,13 +362,22 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Verifying recording quality...'), duration: Duration(seconds: 2)));
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Verifying recording quality...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
 
     await Future.delayed(const Duration(seconds: 3));
 
     // Pass the final uploaded path (wav if converted, otherwise original)
     if (!mounted) return;
-    Navigator.of(context).pushNamed('/student-word-feedback', arguments: uploadPath);
+    // Instead of passing a filesystem path, pass the in-memory PCM bytes
+    // so the feedback screen can replay immediately from the recorder buffer.
+    Navigator.of(
+      context,
+    ).pushNamed('/student-word-feedback', arguments: _pcmRecorder.getBufferedPcmBytes());
 
     // Reset the processing recording state after a short delay.
     // This will allow the user to record again.
@@ -340,18 +387,19 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
     });
   }
 
-
   Future<void> playRecording() async {
     debugPrint('playRecording called');
 
+    await _pcmPlayer.stop();
+
     // Play the buffered PCM data for playback to the user.
-    _pcmPlayer.playBufferedPcm(
+    await _pcmPlayer.playBufferedPcm(
       _pcmRecorder.getBufferedPcmBytes(),
-      sampleRate: 16000
+      sampleRate: 16000,
     );
   }
 
-  Future <void> _handleTts(String word) async {
+  Future<void> _handleTts(String word) async {
     await flutterTts.setLanguage("en-US");
     await flutterTts.setPitch(1);
     await flutterTts.setSpeechRate(0.4);
@@ -378,7 +426,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
 
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -532,7 +579,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
         color: const Color(0xFFFFC6C0).withOpacity(0.20),
       ),
       child: const Center(
-          child: SizedBox(
+        child: SizedBox(
           width: 349,
           child: Text(
             'Click the record button below so that we can hear you pronounce the word!',
@@ -545,23 +592,27 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
   }
 
   Widget _buildRecordButton() {
-  final remaining = (_msElapsed >= 7000) ? 0 : ((7000 - _msElapsed + 999) ~/ 1000);
+    final remaining = (_msElapsed >= 7000)
+        ? 0
+        : ((7000 - _msElapsed + 999) ~/ 1000);
 
     return GestureDetector(
-      onTap: _handleRecord,
+      onTap: _isRecording ? _stopRecording : _handleRecord,
       child: Container(
         width: 160,
         height: 48,
         decoration: BoxDecoration(
-          color: _isRecording ? AppColors.buttonSecondaryRed : AppColors.bgPrimaryOrange,
+          color: _isRecording
+              ? AppColors.buttonSecondaryRed
+              : AppColors.bgPrimaryOrange,
           borderRadius: BorderRadius.circular(1000),
         ),
         child: Center(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-            child: 
-              _isProcessingRecording
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
+            child: _isProcessingRecording
                 ? SizedBox(
                     width: 18,
                     height: 18,
@@ -571,34 +622,34 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
                     ),
                   )
                 : _isRecording
-                  ? Row(
-                      key: const ValueKey('recording'),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            value: _progress > 0 ? _progress : null,
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
+                ? Row(
+                    key: const ValueKey('recording'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          value: _progress > 0 ? _progress : null,
+                          strokeWidth: 2.2,
+                          color: Colors.white,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          remaining > 0 ? 'STOP • ${remaining}s' : 'STOP',
-                          style: AppStyles.buttonText,
-                        ),
-                      ],
-                    )
-                  : Container(
-                      key: const ValueKey('idle'),
-                      child: const Text(
-                        'RECORD',
-                        // use AppStyles.buttonText via DefaultTextStyle? apply directly
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        remaining > 0 ? 'STOP • ${remaining}s' : 'STOP',
                         style: AppStyles.buttonText,
                       ),
+                    ],
+                  )
+                : Container(
+                    key: const ValueKey('idle'),
+                    child: const Text(
+                      'RECORD',
+                      // use AppStyles.buttonText via DefaultTextStyle? apply directly
+                      style: AppStyles.buttonText,
                     ),
+                  ),
           ),
         ),
       ),
@@ -681,14 +732,13 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage> with 
 
   Widget _buildTtsButton() {
     return IconButton(
-        icon: Icon(Icons.volume_up),
-        color: Colors.green,
-        iconSize:40,
-        tooltip: 'Play Example',
-        onPressed: () {
-          _handleTts('$practiceWord');
-        }
+      icon: Icon(Icons.volume_up),
+      color: Colors.green,
+      iconSize: 40,
+      tooltip: 'Play Example',
+      onPressed: () {
+        _handleTts('$practiceWord');
+      },
     );
   }
-
 }

@@ -1,8 +1,10 @@
 // import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_sound/public/flutter_sound_player.dart';
+import 'dart:io';
+import '../../audio/stream/pcm_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../utils/app_colors.dart';
@@ -33,19 +35,24 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  final PcmPlayer _pcmPlayer = PcmPlayer();
 
   Future<void> _handleReplay() async {
     try {
-      final path = ModalRoute.of(context)?.settings.arguments as String?;
-      if (path != null) {
-        await _player.openPlayer();
-        await _player.startPlayer(fromURI: path);
-
+      final pcmBytes = ModalRoute.of(context)?.settings.arguments;
+      if (pcmBytes is Uint8List) {
+        await _pcmPlayer.playBufferedPcm(pcmBytes, sampleRate: 16000);
+        return;
       }
-    } catch (e) {
-      debugPrint('Error playing audio: $e');
+    } catch (e, st) {
+      debugPrint('Error playing PCM via PcmPlayer: $e\n$st');
     }
+  }
+
+  @override
+  void dispose() {
+    _pcmPlayer.dispose();
+    super.dispose();
   }
 
   void _handleDashboard() {
