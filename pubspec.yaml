@@ -55,6 +55,9 @@ dependencies:
   flutter_tts: ^4.0.2
   package_info_plus: ^9.0.0
 
+  # speect-to-text (STT) providers
+  cheetah_flutter: ^2.3.0
+
 
 dev_dependencies:
   flutter_test:

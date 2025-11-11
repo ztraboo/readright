@@ -221,4 +221,13 @@ class PcmRecorder {
     }
     return bytes;
   }
+
+  // Helper: convert Uint8List little-endian PCM16 bytes into an Int16List
+  // view without copying memory when possible.
+  // Used for Speech-to-Text processing.
+  static Int16List bytesToInt16List(Uint8List bytes) {
+    final len = bytes.length - (bytes.length % 2);
+    if (len <= 0) return Int16List(0);
+    return Int16List.view(bytes.buffer, bytes.offsetInBytes, len ~/ 2);
+  }
 }

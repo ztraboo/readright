@@ -1,4 +1,8 @@
 PODS:
+  - Cheetah-iOS (2.3.0)
+  - cheetah_flutter (2.3.0):
+    - Cheetah-iOS (~> 2.3.0)
+    - Flutter
   - cloud_firestore (6.1.0):
     - Firebase/Firestore (= 12.4.0)
     - firebase_core
@@ -134,6 +138,7 @@ PODS:
   - RecaptchaInterop (101.0.0)
 
 DEPENDENCIES:
+  - cheetah_flutter (from `.symlinks/plugins/cheetah_flutter/ios`)
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - cloud_functions (from `.symlinks/plugins/cloud_functions/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
@@ -149,6 +154,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - Cheetah-iOS
     - Firebase
     - FirebaseAppCheckInterop
     - FirebaseAuth
@@ -174,6 +180,8 @@ SPEC REPOS:
     - RecaptchaInterop
 
 EXTERNAL SOURCES:
+  cheetah_flutter:
+    :path: ".symlinks/plugins/cheetah_flutter/ios"
   cloud_firestore:
     :path: ".symlinks/plugins/cloud_firestore/ios"
   cloud_functions:
@@ -206,6 +214,8 @@ CHECKOUT OPTIONS:
     :tag: 12.4.0
 
 SPEC CHECKSUMS:
+  Cheetah-iOS: 9cec7a187cae82897a7cc8f61e52fe8b2a4bacde
+  cheetah_flutter: 40217f0fc1d6147f046709d435c964988a83f7e0
   cloud_firestore: 7a6d8a533ec7418a7fe46b3a5dabf55661a5b298
   cloud_functions: 56bcd60d299724f6366c2d95b706a003f0badcca
   Firebase: f07b15ae5a6ec0f93713e30b923d9970d144af3e

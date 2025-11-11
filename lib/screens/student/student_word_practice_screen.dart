@@ -13,6 +13,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:readright/audio/stream/pcm_player.dart';
 import 'package:readright/audio/stream/pcm_recorder.dart';
+import 'package:readright/audio/stt/on_device/cheetah_assessor.dart';
 import 'package:permission_handler/permission_handler.dart';
 // import 'package:readright/models/user_model.dart';
 import 'package:readright/services/user_repository.dart';
@@ -53,6 +54,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   // until permission has been checked/confirmed.
   final PcmRecorder _pcmRecorder = PcmRecorder();
 
+  late final CheetahAssessor _assessor;
+  String? _lastTranscript;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +68,25 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     // Check to see if the recorder has permissions for the microphone.
     checkRecorderPermission();
+
+    // Initialize the assessor now that _pcmRecorder is available.
+    _assessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
+
+    // Start listening to the assessor stream after recorder is started.
+    // This avoids an issue with the UI stop counter not updating if the
+    // recorder is started/stopped multiple times.
+    _startSTTAccessor();
+
+    // Listen for assessment results (transcripts) and update UI.
+    _assessor.stream.listen((res) {
+      debugPrint('CheetahAssessor stream result: ${res.recognizedText}');
+      if (!mounted) return;
+      setState(() {
+        _lastTranscript = res.recognizedText;
+      });
+    }, onError: (e) {
+      debugPrint('CheetahAssessor stream error: $e');
+    });
 
     UserRepository()
         .fetchCurrentUser()
@@ -84,6 +107,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         });
 
     username = 'unknown';
+  }
+
+  // Start recording for the STT assessor early.
+  Future<void> _startSTTAccessor() async {
+      await _assessor.start();
   }
 
   // Explicit check/request microphone permission for the recorder.
@@ -231,6 +259,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
       // Permission granted: start recording and reset progress
       try {
+        // Start the PCM recorder
         await _pcmRecorder.start(
           sampleRate: 16000,
           numChannels: 1,
@@ -288,6 +317,19 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     // Write raw PCM to a temp file, ask FFmpeg to create WAV, then AAC.
     final pcmBytes = _pcmRecorder.getBufferedPcmBytes();
     if (pcmBytes.isNotEmpty) {
+      // Produce a final transcript from the full buffered PCM bytes so the
+      // user can see the result immediately. This is more deterministic
+      // than relying solely on per-chunk streaming results.
+      try {
+        final res = await _assessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
+        if (mounted) {
+          setState(() {
+            _lastTranscript = res.recognizedText;
+          });
+        }
+      } catch (e, st) {
+        debugPrint('Error running final assess on buffered PCM: $e\n$st');
+      }
       // Create a raw PCM file on disk first.
       final pcmPath = await getAudioFilePath(ext: 'pcm');
       final pcmFile = File(pcmPath);
@@ -377,7 +419,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     // so the feedback screen can replay immediately from the recorder buffer.
     Navigator.of(
       context,
-    ).pushNamed('/student-word-feedback', arguments: _pcmRecorder.getBufferedPcmBytes());
+    ).pushNamed('/student-word-feedback', arguments: { 'pcmBytes': _pcmRecorder.getBufferedPcmBytes(), 'transcript': _lastTranscript });
 
     // Reset the processing recording state after a short delay.
     // This will allow the user to record again.
@@ -455,7 +497,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   // const SizedBox(width: 20),
                   // _buildReplayButton()
                 ],
-              ),
+              ),              
               const SizedBox(height: 24),
               _buildMicrophoneDecibelLevelIndicator(),
             ],

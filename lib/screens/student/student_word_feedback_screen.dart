@@ -21,12 +21,42 @@ class StudentWordFeedbackPage extends StatefulWidget {
 class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
 
   int _currentScore = 0;
+  Uint8List? _pcmBytes;
+  String? _lastTranscript;
 
   @override
   void initState() {
     super.initState();
     _currentScore = Random().nextInt(5) + 1;
     debugPrint("StudentWordFeedbackPage: init with score $_currentScore");
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        setState(() {
+          _lastTranscript = args['transcript'] as String?;
+          _pcmBytes = args['pcmBytes'] as Uint8List?;
+        });
+      } else if (args is Map) {
+        setState(() {
+          _lastTranscript = args['transcript']?.toString();
+          _pcmBytes = args['pcmBytes'] as Uint8List?;
+        });
+      }
+    });
+
+    // final args = ModalRoute.of(context)?.settings.arguments;
+    // if (args is Map<String, dynamic>) {
+    //   _lastTranscript = args['transcript'] as String?;
+    //   _pcmBytes = args['pcmBytes'] as Uint8List?;
+    // } else if (args is Map) {
+    //   _lastTranscript = args['transcript']?.toString();
+    //   _pcmBytes = args['pcmBytes'] as Uint8List?;
+    // } else {
+    //   _lastTranscript = null;
+    //   _pcmBytes = null;
+    // }
+    // debugPrint("StudentWordFeedbackPage: init with transcript: $_lastTranscript");  
   } 
 
   void _handleRetry() {
@@ -39,9 +69,8 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
 
   Future<void> _handleReplay() async {
     try {
-      final pcmBytes = ModalRoute.of(context)?.settings.arguments;
-      if (pcmBytes is Uint8List) {
-        await _pcmPlayer.playBufferedPcm(pcmBytes, sampleRate: 16000);
+      if (_pcmBytes is Uint8List) {
+        await _pcmPlayer.playBufferedPcm(_pcmBytes!, sampleRate: 16000);
         return;
       }
     } catch (e, st) {
@@ -80,7 +109,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               _buildSentenceSection(),
               // const SizedBox(height: 0),
               _buildStarRating(),
-              const SizedBox(height: 0),
+              const SizedBox(height: 12),
+              _buildTranscriptSection(),
+              const SizedBox(height: 12),
               //_buildInstructions(),
               _buildReplayButton(),
               const SizedBox(height: 14),
@@ -91,7 +122,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
                   const SizedBox(width: 20),
                   _buildDashboardButton(),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -261,6 +292,27 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
             ),
           );
         }),
+      ),
+    );
+  }
+
+  Widget _buildTranscriptSection() {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0F7FA).withOpacity(0.3),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Center(
+        child: Text(
+          _lastTranscript != null && _lastTranscript!.isNotEmpty
+              ? 'You said: "${_lastTranscript!}"'
+              : 'Your pronunciation will appear here.',
+          textAlign: TextAlign.center,
+          style: AppStyles.chipText,
+        ),
       ),
     );
   }
