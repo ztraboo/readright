@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -148,10 +147,14 @@ class CheetahAssessor implements PronunciationAssessor {
       debugPrint('CheetahAssessor: flush error: $err');
     }
 
+    // TODO: compute confidence and score based on referenceText vs transcript.
+    double confidence = 0.0;
+    double score = 0.0;
+
     return AssessmentResult(
       recognizedText: transcript,
-      confidence: 0.0,
-      score: 0.0,
+      confidence: confidence,
+      score: score,
       details: {
         'source': 'cheetah_full_assess',
         'timestamp': DateTime.now().toIso8601String(),
