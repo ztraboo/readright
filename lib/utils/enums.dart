@@ -1,4 +1,22 @@
 
+// Enumaration for audio codecs used in the application.
+// ---------------------------------------------------------------
+enum AudioCodec {
+  pcm16,
+  wav,
+  aac,
+  unknown
+}
+
+extension AudioCodecExtension on AudioCodec {
+  String get name => switch (this) {
+      AudioCodec.pcm16 => 'PCM 16-bit',
+      AudioCodec.wav => 'WAV',
+      AudioCodec.aac => 'AAC',
+      AudioCodec.unknown => 'Unknown',
+  };
+}
+
 // Enumeration for different word levels used in the application.
 // Keep the order of the enum values as is; they represent increasing difficulty/order. 
 // ---------------------------------------------------------------
