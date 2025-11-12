@@ -33,4 +33,23 @@ class DeviceUtils {
   static bool isAndroid() {
     return Platform.isAndroid;
   }
+
+  static String getCurrentPlatform() {
+    if (kIsWeb) return 'Web';
+    if (Platform.isAndroid) return 'Android';
+    if (Platform.isIOS) return 'iOS';
+    if (Platform.isLinux) return 'Linux';
+    if (Platform.isMacOS) return 'MacOS';
+    if (Platform.isWindows) return 'Windows';
+    return 'unknown';
+  }
+
+  static Future<String> getOsVersion() async {
+    if (kIsWeb) return 'web';
+    try {
+      return Platform.operatingSystemVersion;
+    } catch (_) {
+      return 'unknown';
+    }
+  }
 }

@@ -15,10 +15,14 @@ import 'package:readright/audio/stream/pcm_player.dart';
 import 'package:readright/audio/stream/pcm_recorder.dart';
 import 'package:readright/audio/stt/on_device/cheetah_assessor.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:readright/models/attempt_model.dart';
+import 'package:readright/services/attempt_repository.dart';
 // import 'package:readright/models/user_model.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
+import 'package:readright/utils/device_utility.dart';
+import 'package:readright/utils/enums.dart';    
 // Audio converter helpers centralized in audio utilities
 import 'package:readright/audio/audio_converter.dart';
 
@@ -185,7 +189,40 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     }
   }
 
-  Future<void> uploadAudioFile(String filePath) async {
+  Future<void> storeAttempt({
+    required String classId,
+    required String userId,
+    required String wordId,
+    required String transcript,
+    required String audioPath,
+    required int durationMS,
+    required double confidence,
+    required double score,
+    required AudioCodec audioCodec,
+  }) async {
+    final attempt = AttemptModel(
+      classId: classId,
+      userId: userId,
+      wordId: wordId,
+      speechToTextTranscript: transcript,
+      audioCodec: audioCodec,
+      audioPath: audioPath,
+      durationMS: durationMS,
+      confidence: confidence,
+      score: score,
+      devicePlatform: DeviceUtils.getCurrentPlatform(),
+      deviceOS: await DeviceUtils.getOsVersion(),
+    );
+
+    try {
+      await AttemptRepository().upsertAttempt(attempt);
+      debugPrint('Attempt record added successfully for wordId: $wordId');
+    } catch (e) {
+      debugPrint('Error adding attempt record: $e');
+    }
+  }
+
+  Future<String> uploadAudioFile(String filePath) async {
     final file = File(filePath);
 
     final fileName = path.basename(filePath);
@@ -198,7 +235,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
       if (!file.existsSync()) {
         debugPrint('File does not exist at: ${file.path}');
-        return;
+        return '';
       }
 
       // pass empty, non null into putFile to appease firebase
@@ -218,6 +255,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       debugPrint('general error: $e');
       debugPrint('stack trace:\n$stackTrace');
     }
+
+    return storageRef.fullPath;
   }
 
   Future<String> getAudioFilePath({String ext = 'aac'}) async {
@@ -335,6 +374,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       final pcmFile = File(pcmPath);
       await pcmFile.writeAsBytes(pcmBytes);
 
+      // Hold reference to Firebase Storage upload path
+      String? fbStoragePath;
+
       // Create WAV from raw PCM using FFmpeg. Use `path` helper to reliably
       // swap the extension (avoids regex edge-cases where replace may fail).
       final wavPath = path.setExtension(pcmPath, '.wav');
@@ -351,14 +393,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           // Prefer direct conversion from PCM -> AAC to avoid unnecessary WAV intermediate.
           await AudioConverter.convertPcmToAac(pcmPath, aacPath);
-          await uploadAudioFile(aacPath);
+          fbStoragePath = await uploadAudioFile(aacPath);
           uploadPath = aacPath;
         } catch (e, st) {
           debugPrint(
             'PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV',
           );
           try {
-            await uploadAudioFile(wavPath);
+            fbStoragePath = await uploadAudioFile(wavPath);
             uploadPath = wavPath;
           } catch (e3, st3) {
             debugPrint('Fallback upload (WAV) also failed: $e3\n$st3');
@@ -369,6 +411,27 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           'PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC',
         );
       }
+
+      // Store attempt record in Firestore
+      await storeAttempt(
+        classId: 'class001', // TODO: Replace with actual class ID 
+        userId: await UserRepository().fetchCurrentUser()
+            .then((user) => user?.id ?? 'unknown_user'),
+        wordId: practiceWord ?? 'word_placeholder',
+        transcript: _lastTranscript ?? '',
+        audioPath: fbStoragePath ?? '',
+        durationMS: pcmBytes.length ~/ 32, // approximate duration
+        confidence: 0.0, // TODO: Replace with actual confidence
+        score: 0.0, // TODO: Replace with actual score
+        audioCodec: (() {
+          final p = uploadPath ?? '';
+          final ext = path.extension(p).toLowerCase();
+          if (ext == '.aac') return AudioCodec.aac;
+          if (ext == '.wav') return AudioCodec.wav;
+          if (ext == '.pcm') return AudioCodec.pcm16;
+          return AudioCodec.unknown;
+        })(),
+      );
 
       // Cleanup temp files for PCM and WAV. AAC is kept for upload.
       try {
