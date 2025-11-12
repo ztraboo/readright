@@ -29,7 +29,7 @@ class AttemptModel {
     required this.score,
     required this.devicePlatform,
     required this.deviceOS,
-  }) : id = id ?? FirestoreUtils.generateDeterministicAttemptId(classId, userId, wordId);
+  }) : id = id ?? FirestoreUtils.generateDeterministicAttemptId(classId, userId, wordId, audioPath);
 
   // Convert AttemptModel instance to JSON for Firestore storage.
   Map<String, dynamic> toJson() {

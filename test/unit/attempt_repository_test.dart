@@ -81,6 +81,80 @@ void main() {
       expect(ids.contains(attempt3.id), isFalse);
     });
 
+    test('fetchAttemptsByUser with two aac attempts for same user and word returns both', () async {
+      final target1 = AttemptModel(
+        classId: 'classX',
+        userId: 'user-123',
+        wordId: 'target-word',
+        speechToTextTranscript: 'target transcript one',
+        audioCodec: AudioCodec.aac,
+        audioPath: '/audio/target1.aac',
+        durationMS: 1200,
+        confidence: 0.77,
+        score: 0.88,
+        devicePlatform: 'android',
+        deviceOS: '12',
+      );
+      final target2 = AttemptModel(
+        classId: 'classX',
+        userId: 'user-123',
+        wordId: 'target-word',
+        speechToTextTranscript: 'target transcript two',
+        audioCodec: AudioCodec.aac,
+        audioPath: '/audio/target2.aac',
+        durationMS: 1250,
+        confidence: 0.80,
+        score: 0.90,
+        devicePlatform: 'android',
+        deviceOS: '12',
+      );
+      final sameWordDifferentCodec = AttemptModel(
+        classId: 'classX',
+        userId: 'user-123',
+        wordId: 'target-word',
+        speechToTextTranscript: 'other codec transcript',
+        audioCodec: AudioCodec.wav,
+        audioPath: '/audio/target.wav',
+        durationMS: 1100,
+        confidence: 0.66,
+        score: 0.70,
+        devicePlatform: 'android',
+        deviceOS: '12',
+      );
+      final otherUserSameCombo = AttemptModel(
+        classId: 'classX',
+        userId: 'user-456',
+        wordId: 'target-word',
+        speechToTextTranscript: 'other user transcript',
+        audioCodec: AudioCodec.aac,
+        audioPath: '/audio/otheruser.aac',
+        durationMS: 1300,
+        confidence: 0.8,
+        score: 0.85,
+        devicePlatform: 'android',
+        deviceOS: '11',
+      );
+
+      await repo.upsertAttempt(target1);
+      await repo.upsertAttempt(target2);
+      await repo.upsertAttempt(sameWordDifferentCodec);
+      await repo.upsertAttempt(otherUserSameCombo);
+
+      final attempts = await repo.fetchAttemptsByUser(
+        'user-123',
+        wordId: 'target-word',
+        audioCodec: AudioCodec.aac,
+      );
+
+      expect(attempts.length, equals(2));
+      final ids = attempts.map((a) => a.id).toSet();
+      expect(ids.contains(target1.id), isTrue);
+      expect(ids.contains(target2.id), isTrue);
+      expect(ids.contains(sameWordDifferentCodec.id), isFalse);
+      expect(ids.contains(otherUserSameCombo.id), isFalse);
+    });
+
+
     test('upsertAttempt updates existing document with new values', () async {
       final original = AttemptModel(
         classId: 'upsertClass',

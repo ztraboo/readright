@@ -5,12 +5,12 @@ import 'package:crypto/crypto.dart';
 /// Small utility helpers used by Firestore-backed models.
 class FirestoreUtils {
   
-  /// Generate a deterministic id from `classId`, `userId`, and `wordId`.
+  /// Generate a deterministic id from `classId`, `userId`, `wordId`, and `audioPath`.
   ///
-  /// This uses SHA-256 over the string `<classId>|<userId>|<wordId>` and returns the
+  /// This uses SHA-256 over the string `<classId>|<userId>|<wordId>|<audioPath>|` and returns the
   /// hex digest. The result is stable across runs for the same inputs.
-  static String generateDeterministicAttemptId(String classId, String userId, String wordId) {
-    final input = '$classId|$userId|$wordId';
+  static String generateDeterministicAttemptId(String classId, String userId, String wordId, String audioPath) {
+    final input = '$classId|$userId|$wordId|$audioPath';
     final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
