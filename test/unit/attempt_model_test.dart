@@ -20,7 +20,7 @@ void main() {
         deviceOS: '11',
       );
 
-      final expected = FirestoreUtils.generateDeterministicAttemptId('class123', 'user456', 'attempt');
+      final expected = FirestoreUtils.generateDeterministicAttemptId('class123', 'user456', 'attempt', '/path/to/user456_attempt_1234567890.aac');
       expect(m.id, equals(expected));
     });
 
