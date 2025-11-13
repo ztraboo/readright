@@ -121,6 +121,32 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
         ),
         securePassword: passwordController.text,
       );
+      //Create Class for Teacher if Successful
+        if (userModel != null) {
+              final teacherUid = userModel!.id;
+
+              //Create an empty class document
+              final classDocRef = await FirebaseFirestore.instance.collection('classes').add({
+                'classAverage': 0.00,
+                'students': [],
+                'teacherId': teacherUid,
+                'topStruggledWords': [],
+                'classId': '',
+                'classCode': '',
+              });
+
+              //Retrieve the generated document ID
+              final classId = classDocRef.id;
+              final classCode = classId.substring(0, 6);
+
+              //Update the same document with classId and classCode
+              await classDocRef.update({
+                'classId': classId,
+                'classCode': classCode,
+              });
+
+            }
+        
     } on FirebaseException catch (e, st) {
       debugPrint("Error during user creation: ${e.toString()}\n$st");
 
