@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -22,23 +23,6 @@ class CheetahAssessor implements PronunciationAssessor {
   final PcmRecorder pcmRecorder;
   final String practiceWord;
 
-  StreamSubscription<Uint8List>? _sub;
-  // Expose assessment results as a broadcast stream so callers (UI) can
-  // subscribe and receive transcripts produced from recorded audio chunks.
-  final StreamController<AssessmentResult> _controller = StreamController<AssessmentResult>.broadcast();
-
-  /// Broadcast stream of assessment results. UI code can listen to this to
-  /// display partial or final transcripts.
-  Stream<AssessmentResult> get stream => _controller.stream;
-
-  // /// Exposed broadcast stream of assessment results.
-  // Stream<AssessmentResult> get stream => _controller.stream;
-
-  /// A light exponential smoothing factor applied to RMS values to make the
-  /// reported dB values less jumpy. Values closer to 1.0 smooth more.
-  // final double smoothing;
-  // double _smoothedRms = 0.0;
-
   // CheetahAssessor({this.smoothing = 0.2});
   CheetahAssessor({
     required this.pcmRecorder,
@@ -60,21 +44,6 @@ class CheetahAssessor implements PronunciationAssessor {
   Future<void> start() async {
     // Initialize Cheetah instance
     await createCheetah();
-
-    await pcmRecorder.init();
-    // Subscribe to PCM stream and perform an assess per chunk. Results are
-    // emitted to the `_controller` so callers can react (UI updates, logs).
-    _sub = pcmRecorder.pcmStream.listen((chunk) async {
-      try {
-        final result = await assess(referenceText: practiceWord, audioBytes: chunk, locale: 'en-US');
-        // Emit result to any listeners.
-        if (!_controller.isClosed) _controller.add(result);
-      } catch (err, st) {
-        debugPrint('CheetahAssessor: assess error: $err\n$st');
-      }
-    }, onError: (e) {
-      debugPrint('CheetahAssessor: recorder stream error: $e');
-    });
   }
 
   @override
@@ -98,8 +67,6 @@ class CheetahAssessor implements PronunciationAssessor {
         throw StateError('Cheetah instance could not be initialized');
       }
     }
-
-    // debugPrint('CheetahAssessor: assessing audioBytes with referenceText="$referenceText"');
 
     // Convert raw PCM bytes (little-endian 16-bit) to Int16List view.
     final samples = PcmRecorder.bytesToInt16List(audioBytes);
@@ -149,7 +116,10 @@ class CheetahAssessor implements PronunciationAssessor {
 
     // TODO: compute confidence and score based on referenceText vs transcript.
     double confidence = 0.0;
-    double score = 0.0;
+    
+    // Generate a random score between 0.0 and 1.0 with two decimal places.
+    // Make sure to update this calculate based on Levenshtein distance calculation.
+    double score = double.parse((Random().nextInt(101) / 100).toStringAsFixed(2));
 
     return AssessmentResult(
       recognizedText: transcript,
@@ -163,22 +133,8 @@ class CheetahAssessor implements PronunciationAssessor {
     );
   }
 
-  /// Stop listening and close resources. After calling stop, you can call
-  /// start(...) again to re-subscribe.
-  Future<void> stop() async {
-    if (_sub != null) {
-      await _sub!.cancel();
-      _sub = null;
-    }
-  }
-
   /// Dispose resources; after this the instance should not be used.
   Future<void> dispose() async {
-    await stop();
-    // await _controller.close();
-
-    if (!_controller.isClosed) await _controller.close();
-
     await _cheetah?.delete();
   }
 
