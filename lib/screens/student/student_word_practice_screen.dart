@@ -14,6 +14,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:readright/audio/stream/pcm_player.dart';
 import 'package:readright/audio/stream/pcm_recorder.dart';
 import 'package:readright/audio/stt/on_device/cheetah_assessor.dart';
+import 'package:readright/audio/stt/pronunciation_assessor.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/services/attempt_repository.dart';
@@ -68,29 +69,18 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     // Initialize the PCM player now. The recorder will manage microphone
     // permission and initialize itself on start().
-    _pcmPlayer.init();
+    _initPCMPlayer();
+
+    // Initialize the PCM recorder if not already initialized
+    _initPCMRecorder();
 
     // Check to see if the recorder has permissions for the microphone.
     checkRecorderPermission();
-
-    // Initialize the assessor now that _pcmRecorder is available.
-    _assessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
 
     // Start listening to the assessor stream after recorder is started.
     // This avoids an issue with the UI stop counter not updating if the
     // recorder is started/stopped multiple times.
     _startSTTAccessor();
-
-    // Listen for assessment results (transcripts) and update UI.
-    _assessor.stream.listen((res) {
-      debugPrint('CheetahAssessor stream result: ${res.recognizedText}');
-      if (!mounted) return;
-      setState(() {
-        _lastTranscript = res.recognizedText;
-      });
-    }, onError: (e) {
-      debugPrint('CheetahAssessor stream error: $e');
-    });
 
     UserRepository()
         .fetchCurrentUser()
@@ -113,9 +103,25 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     username = 'unknown';
   }
 
+  // Initialize the PCM player now. The recorder will manage microphone permission.
+  Future<void> _initPCMPlayer() async {
+    await _pcmPlayer.init();
+  }
+
+  // Initialize the PCM recorder if not already initialized
+  Future<void> _initPCMRecorder() async {
+    await _pcmRecorder.init();
+
+    // When transition back to this page from the feedback screen, ensure the recorder is stopped.
+    _pcmRecorder.stop();
+  }
+
   // Start recording for the STT assessor early.
   Future<void> _startSTTAccessor() async {
-      await _assessor.start();
+    // Initialize the assessor now that _pcmRecorder is available.
+    _assessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
+
+    await _assessor.start();
   }
 
   // Explicit check/request microphone permission for the recorder.
@@ -351,6 +357,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     });
 
     String? uploadPath;
+    late final AssessmentResult? attemptResult;
 
     // Save buffered PCM bytes and encode to WAV and AAC using FFmpeg.
     // Write raw PCM to a temp file, ask FFmpeg to create WAV, then AAC.
@@ -360,10 +367,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // user can see the result immediately. This is more deterministic
       // than relying solely on per-chunk streaming results.
       try {
-        final res = await _assessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
-        if (mounted) {
+        attemptResult = await _assessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
+        if (mounted && attemptResult?.recognizedText.isNotEmpty == true) {
           setState(() {
-            _lastTranscript = res.recognizedText;
+            _lastTranscript = attemptResult?.recognizedText;
           });
         }
       } catch (e, st) {
@@ -482,7 +489,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     // so the feedback screen can replay immediately from the recorder buffer.
     Navigator.of(
       context,
-    ).pushNamed('/student-word-feedback', arguments: { 'pcmBytes': _pcmRecorder.getBufferedPcmBytes(), 'transcript': _lastTranscript });
+    ).pushNamed(
+        '/student-word-feedback',
+        arguments: {
+          'pcmBytes': _pcmRecorder.getBufferedPcmBytes(),
+          'attemptResult': attemptResult,
+        });
 
     // Reset the processing recording state after a short delay.
     // This will allow the user to record again.

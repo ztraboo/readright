@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import '../../audio/stream/pcm_player.dart';
+import '../../audio/stt/pronunciation_assessor.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../utils/app_colors.dart';
@@ -21,42 +22,62 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
 
   int _currentScore = 0;
   Uint8List? _pcmBytes;
-  String? _lastTranscript;
+  AssessmentResult? _attemptResult;
 
   @override
   void initState() {
     super.initState();
-    _currentScore = Random().nextInt(5) + 1;
-    debugPrint("StudentWordFeedbackPage: init with score $_currentScore");
 
+    // Grab passed arguments from Navigator
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
         setState(() {
-          _lastTranscript = args['transcript'] as String?;
+          _attemptResult = args['attemptResult'] as AssessmentResult?;
           _pcmBytes = args['pcmBytes'] as Uint8List?;
         });
       } else if (args is Map) {
         setState(() {
-          _lastTranscript = args['transcript']?.toString();
+          _attemptResult = args['attemptResult'];
           _pcmBytes = args['pcmBytes'] as Uint8List?;
         });
       }
-    });
 
-    // final args = ModalRoute.of(context)?.settings.arguments;
-    // if (args is Map<String, dynamic>) {
-    //   _lastTranscript = args['transcript'] as String?;
-    //   _pcmBytes = args['pcmBytes'] as Uint8List?;
-    // } else if (args is Map) {
-    //   _lastTranscript = args['transcript']?.toString();
-    //   _pcmBytes = args['pcmBytes'] as Uint8List?;
-    // } else {
-    //   _lastTranscript = null;
-    //   _pcmBytes = null;
-    // }
-    // debugPrint("StudentWordFeedbackPage: init with transcript: $_lastTranscript");  
+      // Normalize score based on attemptResult score value if available.
+      // Only normalize if score is greater than zero.
+      if (_attemptResult != null && _attemptResult!.score > 0) {
+        _normalizeSTTScoreToStars(rawScore: _attemptResult?.score as double).then((normalized) {
+          setState(() {
+            debugPrint("StudentWordFeedbackPage: Speech-To-Text (STT) score of ${_attemptResult?.score} is represented as ${normalized} stars.");
+            _currentScore = normalized;
+          });
+        });
+      }
+    }); 
   } 
+
+  // Normalize raw score to 0..5 integer stars based on rawScore input of 0..1 or 0..100 pecentage value.
+  // Returns integer in 0..5 range to represent star count.
+  Future<int> _normalizeSTTScoreToStars({double rawScore = 0.0}) async {
+    final rawScoreValue = rawScore;
+    // Normalize to a 0.0 - 1.0 percentage (handle values in 0..1 or 0..100)
+    double percent = 0.0;
+    if (rawScoreValue is num) {
+    percent = rawScoreValue.toDouble();
+    } else {
+    percent = double.tryParse(rawScoreValue?.toString() ?? '') ?? 0.0;
+    }
+    if (percent > 1.0) {
+    // assume value was 0..100, convert to 0..1
+    percent = percent / 100.0;
+    }
+    // Map percentage to 0..5 stars, rounding to nearest integer.
+    int mapped = (percent * 5).round();
+    // Treat tiny non-zero scores as at least 1 star
+    if (percent > 0 && mapped == 0) mapped = 1;
+    mapped = max(0, min(5, mapped));
+    return mapped;
+  }
 
   void _handleRetry() {
     Navigator.pop(  
@@ -204,7 +225,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       case 5:
         return 'Excellent! Perfect pronunciation!';
       default:
-        return '';
+        return 'Let us try again!';
     }
   }
 
@@ -306,8 +327,8 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       ),
       child: Center(
         child: Text(
-          _lastTranscript != null && _lastTranscript!.isNotEmpty
-              ? 'You said: "${_lastTranscript!}"'
+          _attemptResult != null && _attemptResult!.recognizedText.isNotEmpty
+              ? 'You said: "${_attemptResult!.recognizedText}"'
               : 'Your pronunciation will appear here.',
           textAlign: TextAlign.center,
           style: AppStyles.chipText,
