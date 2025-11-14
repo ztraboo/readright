@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'class/class_student_details_screen.dart';
 import '../../services/user_repository.dart';
+import '../../services/student_repository.dart';
 
 class TeacherDashboardPage extends StatelessWidget {
   const TeacherDashboardPage({super.key});
@@ -12,6 +13,7 @@ class TeacherDashboardPage extends StatelessWidget {
     return user?.id ?? '';
   }
 
+  // Get students in teacher's class.
   Future<List<Map<String, dynamic>>> fetchStudents() async {
     final teacherUid = await this.teacherUid;
 
@@ -19,6 +21,7 @@ class TeacherDashboardPage extends StatelessWidget {
       throw Exception('No teacher is currently signed in.');
     }
 
+    // Get the teacher's class
     final classSnapshot = await FirebaseFirestore.instance
         .collection('classes')
         .where('teacherId', isEqualTo: teacherUid)
@@ -29,6 +32,7 @@ class TeacherDashboardPage extends StatelessWidget {
     final classData = classSnapshot.docs.first.data();
     final totalWords = classData['totalWords'] ?? 0;
 
+    // Get student UIDs from the class
     final studentUids = <String>[];
     if (classData.containsKey('students')) {
       final studentsList = List<String>.from(classData['students']);
@@ -37,33 +41,38 @@ class TeacherDashboardPage extends StatelessWidget {
 
     if (studentUids.isEmpty) return [];
 
+    // Get student progress
     final studentSnapshot = await FirebaseFirestore.instance
         .collection('students')
         .where('uid', whereIn: studentUids)
         .get();
 
+    // Get student names
     final userSnapshot = await FirebaseFirestore.instance
         .collection('users')
         .where('uid', whereIn: studentUids)
         .get();
 
+    // Creates a map from student UID to student name
     final uidToName = {
       for (var doc in userSnapshot.docs)
-        doc.data()['uid']: doc.data()['displayName']
+        doc.data()['uid']: doc.data()['fullName'],
     };
 
+    // Combine student progress with names
     return studentSnapshot.docs.map((doc) {
       final data = doc.data();
       final uid = data['uid'] ?? '';
       return {
         'uid': uid,
-        'displayName': uidToName[uid] ?? 'No Name',
+        'fullName': uidToName[uid] ?? 'No Name',
         'completed': data['completed'] ?? 0,
         'totalWords': totalWords,
       };
     }).toList();
   }
 
+  // Get Class Details
   Future<Map<String, dynamic>> fetchClassDetails() async {
     final teacherUid = await this.teacherUid;
 
@@ -85,14 +94,32 @@ class TeacherDashboardPage extends StatelessWidget {
     };
   }
 
+  // Get teacher name
   Future<String> fetchTeacherName(String teacherId) async {
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .where('id', isEqualTo: teacherId)
         .limit(1)
         .get();
+
     if (doc.docs.isEmpty) return 'Unknown';
     return doc.docs.first.data()['fullName'] ?? 'Unknown';
+  }
+
+  // Get class ID
+  Future<String?> fetchClassId() async {
+    final teacher = await teacherUid;
+    if (teacher.isEmpty) return null;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('classes')
+        .where('teacherId', isEqualTo: teacher)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) return null;
+
+    return snapshot.docs.first.id;
   }
 
   @override
@@ -114,7 +141,35 @@ class TeacherDashboardPage extends StatelessWidget {
             // Students Tab
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: StudentsTab(),
+              child: FutureBuilder<Map<String, dynamic>>(
+                future: fetchClassDetails(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final classData = snapshot.data!;
+                  final classCode = classData['classCode'] ?? '';
+
+                  return FutureBuilder<String?>(
+                    future: fetchClassId(),
+                    builder: (context, idSnapshot) {
+                      if (!idSnapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final classId = idSnapshot.data ?? '';
+
+                      // Pass class and teacher details to the student tab
+                      return StudentsTab(
+                        classId: classId,
+                        classCode: classCode,
+                        teacherUid: classData['teacherId'] ?? '',
+                      );
+                    },
+                  );
+                },
+              ),
             ),
 
             // Class Details Tab
@@ -129,11 +184,13 @@ class TeacherDashboardPage extends StatelessWidget {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   }
+
                   final classData = snapshot.data ?? {};
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Teacher Name
+                      // Displays teacher name (after retrieving)
                       FutureBuilder<String>(
                         future: fetchTeacherName(classData['teacherId'] ?? ''),
                         builder: (context, teacherSnapshot) {
@@ -144,9 +201,7 @@ class TeacherDashboardPage extends StatelessWidget {
                             children: [
                               Text(
                                 'Teacher',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 8),
@@ -160,9 +215,7 @@ class TeacherDashboardPage extends StatelessWidget {
                       // Class Code
                       Text(
                         'Class Code',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
@@ -172,9 +225,7 @@ class TeacherDashboardPage extends StatelessWidget {
                       // Class Average
                       Text(
                         'Class Average',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
@@ -184,9 +235,7 @@ class TeacherDashboardPage extends StatelessWidget {
                       // Top Struggled Words
                       Text(
                         'Top Struggled Words',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
@@ -203,6 +252,8 @@ class TeacherDashboardPage extends StatelessWidget {
             ),
           ],
         ),
+
+        // Button to navigate to the teacher word dashboard.
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () {
             Navigator.pushNamed(context, '/teacher-word-dashboard');
@@ -216,9 +267,18 @@ class TeacherDashboardPage extends StatelessWidget {
   }
 }
 
-/// Students
+// Students tab for listing, searching, sorting, and adding students.
 class StudentsTab extends StatefulWidget {
-  const StudentsTab({super.key});
+  final String classId;
+  final String classCode;
+  final String teacherUid;
+
+  const StudentsTab({
+    super.key,
+    required this.classId,
+    required this.classCode,
+    required this.teacherUid,
+  });
 
   @override
   State<StudentsTab> createState() => _StudentsTabState();
@@ -226,22 +286,110 @@ class StudentsTab extends StatefulWidget {
 
 class _StudentsTabState extends State<StudentsTab> {
   String searchText = '';
-   // default sort by name
   String sortBy = 'name';
-  
-   // default ascending
   bool ascending = true;
+
+  // Opens a dialog allowing the teacher to manually create a new student.
+  // Uses StudentRepository, which preserves teacher authentication.
+  void _showAddStudentDialog(BuildContext context) {
+    final fullNameController = TextEditingController();
+    final emailController = TextEditingController();
+    final usernameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add New Student'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: fullNameController,
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(labelText: 'Username'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () {
+                fullNameController.clear();
+                emailController.clear();
+                usernameController.clear();
+                Navigator.pop(context);
+              },
+            ),
+            ElevatedButton(
+              child: const Text("Create"),
+              onPressed: () async {
+                final fullName = fullNameController.text.trim();
+                final email = emailController.text.trim();
+                final username = usernameController.text.trim();
+
+                // Prevents blank values.
+                if (fullName.isEmpty || email.isEmpty || username.isEmpty)
+                  return;
+
+                try {
+                  // Creates the student without switching authentication.
+                  await StudentRepository.registerStudentByTeacherId(
+                    username: username,
+                    email: email,
+                    fullName: fullName,
+                    teacherUid: widget.teacherUid,
+                  );
+
+                  // Ensures context is still valid before using it.
+                  if (!context.mounted) return;
+
+                  fullNameController.clear();
+                  emailController.clear();
+                  usernameController.clear();
+                  Navigator.pop(context);
+
+                  // Reloads the student list.
+                  setState(() {});
+                } catch (e) {
+                  debugPrint('Error creating student: $e');
+
+                  if (!context.mounted) return;
+
+                  // Shows an error message to the teacher.
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to create student: $e')),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final parent =
-        context.findAncestorWidgetOfExactType<TeacherDashboardPage>();
+    // Access the parent widget
+    final parent = context
+        .findAncestorWidgetOfExactType<TeacherDashboardPage>();
 
     return Column(
       children: [
-        // Search + Sort
         Row(
           children: [
+            // Search field
             Expanded(
               child: TextField(
                 decoration: const InputDecoration(
@@ -257,6 +405,16 @@ class _StudentsTabState extends State<StudentsTab> {
               ),
             ),
             const SizedBox(width: 8),
+
+            // Add student button
+            IconButton(
+              icon: const Icon(Icons.person_add),
+              tooltip: 'Add Student',
+              onPressed: () => _showAddStudentDialog(context),
+            ),
+            const SizedBox(width: 8),
+
+            // Sort
             PopupMenuButton<String>(
               icon: const Icon(Icons.sort),
               onSelected: (value) {
@@ -298,6 +456,7 @@ class _StudentsTabState extends State<StudentsTab> {
           ],
         ),
         const SizedBox(height: 16),
+
         // Student List
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -309,22 +468,25 @@ class _StudentsTabState extends State<StudentsTab> {
               if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
+
               final students = snapshot.data ?? [];
 
               // Filter by search text
               final filteredStudents = students
-                  .where((s) => (s['displayName'] as String)
-                      .toLowerCase()
-                      .contains(searchText))
+                  .where(
+                    (s) => (s['fullName'] as String).toLowerCase().contains(
+                      searchText,
+                    ),
+                  )
                   .toList();
 
               // Sort
               filteredStudents.sort((a, b) {
                 int result;
                 if (sortBy == 'name') {
-                  result = (a['displayName'] as String)
-                      .toLowerCase()
-                      .compareTo((b['displayName'] as String).toLowerCase());
+                  result = (a['fullName'] as String).toLowerCase().compareTo(
+                    (b['fullName'] as String).toLowerCase(),
+                  );
                 } else {
                   final aPct = (a['totalWords'] == 0)
                       ? 0
@@ -341,16 +503,18 @@ class _StudentsTabState extends State<StudentsTab> {
                 return const Center(child: Text('No students found.'));
               }
 
+              // Student tiles with progress bar
               return ListView.builder(
                 itemCount: filteredStudents.length,
                 itemBuilder: (context, index) {
                   final student = filteredStudents[index];
                   final completed = student['completed'] ?? 0;
                   final totalWords = student['totalWords'] ?? 0;
+
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
-                      title: Text(student['displayName']),
+                      title: Text(student['fullName']),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -358,9 +522,7 @@ class _StudentsTabState extends State<StudentsTab> {
                           Text('Words completed: $completed/$totalWords'),
                           const SizedBox(height: 4),
                           LinearProgressIndicator(
-                            value: totalWords == 0
-                                ? 0
-                                : completed / totalWords,
+                            value: totalWords == 0 ? 0 : completed / totalWords,
                             minHeight: 8,
                             backgroundColor: Colors.grey[300],
                             color: Colors.green,
@@ -369,11 +531,12 @@ class _StudentsTabState extends State<StudentsTab> {
                       ),
                       trailing: const Icon(Icons.arrow_forward),
                       onTap: () {
+                        // Navigate to student details screen
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ClassStudentDetails(
-                                studentUid: student['uid']),
+                            builder: (_) =>
+                                ClassStudentDetails(studentUid: student['uid']),
                           ),
                         );
                       },
