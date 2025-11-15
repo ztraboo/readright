@@ -1,25 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../services/user_repository.dart';
-import '../../utils/app_colors.dart';
-import '../../utils/app_styles.dart';
+import 'package:readright/models/user_model.dart';
+import 'package:readright/models/attempt_model.dart';
+import 'package:readright/services/attempt_repository.dart';
+import 'package:readright/services/user_repository.dart';
+import 'package:readright/services/word_respository.dart';
+import 'package:readright/utils/app_colors.dart';
+import 'package:readright/utils/app_styles.dart';
+import 'package:readright/utils/enums.dart';
 
 class StudentWordDashboardPage extends StatefulWidget {
   const StudentWordDashboardPage({super.key});
 
   @override
-  State<StudentWordDashboardPage> createState() => _StudentWordDashboardPageState();
+  State<StudentWordDashboardPage> createState() =>
+      _StudentWordDashboardPageState();
 }
 
-class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
-  final Set<String> _selectedFilters = {'Sight Words', 'Minimal Pairs'};
-  // final Set<String> _completedWords = {'away'};
+class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> { 
+
+  late final UserModel? _currentUser;
+  late final List<AttemptModel> _userAttempts;
+  late final String practiceWord;
 
   @override
   void initState() {
     super.initState();
-
+  
     // Verify that the user is logged into Firebase by checking the currentUser status.
     UserRepository().fetchCurrentUser().then((user) {
       if (user == null) {
@@ -27,41 +35,155 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
         // Optionally, navigate to the login screen.
       } else {
         debugPrint('StudentWordDashboardPage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}');
+
+        setState(() {
+          _currentUser = user;
+        
+          // Fetch attempts for the current user from the database.
+          AttemptRepository().fetchAttemptsByUser(
+            _currentUser?.id ?? '',
+            classId: 'cXEZyKGck7AHvcP6Abvn'
+          ).then((attempts) {
+              _userAttempts = attempts;
+              debugPrint('Fetched ${_userAttempts.length} attempts for user ${_currentUser?.id}');
+          });
+
+        });
       }
     }).catchError((error) {
       debugPrint('Error fetching current user: $error');
     });
+
   }
 
-  void _toggleFilter(String filter) {
-    setState(() {
-      if (_selectedFilters.contains(filter)) {
-        _selectedFilters.remove(filter);
-      } else {
-        _selectedFilters.add(filter);
+  Future<List<String>> _fetchLevelWords(WordLevel wordLevel) async {
+    try {
+      debugPrint('Fetching words for level: ${wordLevel.name}');
+      final words = await WordRepository().fetchLevelWords(wordLevel);
+      debugPrint('Fetched ${words.length} words for level: ${wordLevel.name}');
+      return words.map((w) => w.text ?? '').toList();
+    } catch (e) {
+      debugPrint('Error fetching words for level ${wordLevel.name}: $e');
+      return [];
+    }
+  }
+
+  Future<int> _fetchLevelWordCompletedTotalByUser(WordLevel wordLevel) async {
+    try {
+      debugPrint('Fetching words for level: ${wordLevel.name}');
+      final words = await WordRepository().fetchLevelWords(wordLevel);
+      final wordTexts = words.map((w) => w.text ?? '').toList();
+      if (wordTexts.isEmpty) return 0;
+
+      // Count words where the user has at least one attempt with score > 0.00
+      if (_userAttempts.isEmpty) return 0;
+      int completed = 0;
+      for (final word in wordTexts) {
+        final hasSuccessfulAttempt = _userAttempts.any(
+          (a) => a.wordId == word && (a.score ?? 0) > 0.00,
+        );
+        if (hasSuccessfulAttempt) completed++;
       }
-    });
+      return completed;
+    } catch (e) {
+      debugPrint('Error fetching words for level ${wordLevel.name}: $e');
+      return 0;
+    }
   }
 
-  void _clearFilters() {
-    setState(() {
-      _selectedFilters.clear();
-    });
+  Future<String> _fetchUsersPracticeWord(WordLevel wordLevel) async {
+    // Compute the practice word for the user to practice in the given word level.
+    // This is a placeholder implementation; replace with actual logic.
+    try {
+      final words = await WordRepository().fetchLevelWords(wordLevel);
+      final wordTexts = words.map((w) => w.text ?? '').toList();
+      if (wordTexts.isEmpty) return '';
+      if (_userAttempts.isEmpty) return wordTexts.first;
+
+      // Find the first word that the user has not yet attempted.
+      final practiceWord = wordTexts.firstWhere(
+        (word) {
+          final attemptsForWord = _userAttempts.where((a) => a.wordId == word);
+          // Select the word if there are no attempts yet.
+          return attemptsForWord.isEmpty;
+        },
+        orElse: () => wordTexts.first,
+      );
+      debugPrint('Selected practice word for level ${wordLevel.name}: $practiceWord');
+      return practiceWord;
+    } catch (e) {
+      debugPrint('Error fetching practice word for level ${wordLevel.name}: $e');
+      return '';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           child: Column(
             children: [
               _buildHeader(),
-              _buildCompletionProgress(),
-              _buildFilterInstructions(),
-              _buildFilterChips(),
-              _buildWordList(),
+              const SizedBox(height: 19),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Column(
+                  children: [
+                    ...fetchWordLevelsIncreasingDifficultyOrder().map((wordLevel) {
+                      
+                      // For each word level, fetch the words and compute progress.
+                      return FutureBuilder<List<String>>(
+                        future: _fetchLevelWords(wordLevel), // to prefetch words for this level
+                        builder: (context, snapshot) {
+                          final levelWordIds = snapshot.data ?? [];
+
+                          final computedTotalWords = levelWordIds.length;
+
+                          // Now fetch the completed total for this level.
+                          return FutureBuilder<int>(
+                            future: _fetchLevelWordCompletedTotalByUser(wordLevel),
+                            builder: (context, snapshotCompleted) {
+                              final completed = snapshotCompleted.data ?? 0;
+                              int remaining = computedTotalWords - completed;
+                              if (remaining < 0) remaining = 0;
+                              final progress = computedTotalWords > 0
+                                  ? completed / computedTotalWords
+                                  : 0.0;
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10.0),
+                                child: _buildWordListCard(
+                                  title: wordLevel.name,
+                                  backgroundColor:
+                                      wordLevel.backgroundColor.withOpacity(0.20),
+                                  borderRadius: 20,
+                                  icon:
+                                    _buildUnLockIcon(color: Colors.green), 
+                                  // wordLevel.isLocked
+                                  //     ? _buildLockIcon(color: wordLevel.iconColor)
+                                  //     : wordLevel.isUnlocked
+                                  //         ? _buildUnLockIcon(color: wordLevel.iconColor)
+                                  //         : _buildCheckIcon(),
+                                  done: completed,
+                                  remaining: remaining,
+                                  progress: progress,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    }),
+
+                    // Separator between word levels
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -72,210 +194,150 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 246,
+      height: 280,
       color: AppColors.bgPrimaryGray,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
+      child: Stack(
         children: [
-          const Text(
-            'Practice Words',
-            style: AppStyles.headerText
-          ),
-          const SizedBox(height: 22),
-          Container(
-            width: 90,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFF292929),
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: Colors.black, width: 1),
+          Positioned(
+            right: 23,
+            top: 140,
+            child: SizedBox(
+              width: 150,
+              height: 146,
+              child: _buildFireIcon(),
             ),
           ),
-          const SizedBox(height: 26),
-          const SizedBox(
-            width: 349,
-            child: Text(
-              'Select each word in the list below to explore best way to pronounce them.',
-              style: AppStyles.subheaderText,
-            ),
-          ),
-          const SizedBox(height: 38),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompletionProgress() {
-    const int done = 3;
-    const int total = 15;
-    final double progress = done / total;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFC6C0).withOpacity(0.20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Completion Progress',
-            style: AppStyles.subsectionText,
-          ),
-          const SizedBox(height: 22),
-          _buildProgressBar(progress),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Row(
-                children: [
-                  const Text(
-                    'Done',
-                    style: AppStyles.subheaderText,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '$done',
-                    style: AppStyles.subheaderText.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 20),
-              Row(
-                children: [
-                  const Text(
-                    'Remaining',
-                    style: AppStyles.subheaderText,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${total - done}',
-                    style: AppStyles.subheaderText.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressBar(double progress) {
-    return SizedBox(
-      height: 44,
-      child: Center(
-        child: Container(
-          width: double.infinity,
-          height: 6,
-          decoration: BoxDecoration(
-            color: const Color(0xFF787878).withOpacity(0.20),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: FractionallySizedBox(
-              widthFactor: progress,
-              child: Container(
-                width: double.infinity,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0088FF),
-                  borderRadius: BorderRadius.circular(3),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 90),
+                const Text(
+                  'Dashboard',
+                  style: AppStyles.headerText,
                 ),
-              ),
+                const SizedBox(height: 22),
+                Container(
+                  width: 90,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF292929),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: Colors.black, width: 1),
+                  ),
+                ),
+                const SizedBox(height: 26),
+                const SizedBox(
+                  width: 223,
+                  child: Text(
+                    'Select a word list below to explore best way to pronounce them. ',
+                    style: AppStyles.subheaderText,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterInstructions() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        child: Text(
-          'Use the filter chips below to display only the grouped category of words. This is helpful if your instructor only wants you to focus on a specific set of words.',
-          style: TextStyle(
-            fontFamily: 'SF Compact Display',
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: Colors.black,
-            height: 1.375,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 11,
-        children: [
-          _buildFilterChip(
-            'Sight Words',
-            const Color(0xFF7498C4),
-            const Color(0xFF754F4B),
-          ),
-          _buildFilterChip(
-            'Minimal Pairs',
-            const Color(0xFFC99379),
-            const Color(0xFF754F4B),
-          ),
-          _buildFilterChip(
-            'Phonics Patterns',
-            const Color(0xFFFF3939),
-            const Color(0xFF754F4B),
-            showCheck: false,
-          ),
-          _buildClearFiltersButton(),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, Color borderColor, Color textColor, {bool showCheck = true}) {
-    final bool isSelected = _selectedFilters.contains(label);
-    
+  Widget _buildWordListCard({
+    required String title,
+    required Color backgroundColor,
+    required double borderRadius,
+    required Widget icon,
+    required int done,
+    required int remaining,
+    required double progress,
+  }) {
+     
     return GestureDetector(
-      onTap: () => _toggleFilter(label),
+      onTap: () async {
+        Navigator.pushNamed(
+          context,
+          '/student-word-practice',
+          arguments: {
+            'practiceWord': await _fetchUsersPracticeWord(wordLevelFromString(title)),
+            'wordLevel': wordLevelFromString(title),
+          }, 
+        );
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? borderColor.withOpacity(0.20) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderColor, width: 1),
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           children: [
-            if (isSelected && showCheck) ...[
-              SvgPicture.asset(
-                'assets/icons/check-svgrepo-com.svg',
-                width: 15,
-                semanticsLabel: 'Checkmark',
-              ),
-              const SizedBox(width: 10),
-            ],
-            Text(
-              label,
-              style: AppStyles.chipText.copyWith(
-                color: textColor,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'SF Pro',
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                      height: 0.917,
+                    ),
+                  ),
+                ),
+                icon,
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildProgressBar(progress),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Text(
+                  'Done',
+                  style: TextStyle(
+                    fontFamily: 'SF Compact Display',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$done',
+                  style: const TextStyle(
+                    fontFamily: 'SF Compact Display',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                const Text(
+                  'Remaining',
+                  style: TextStyle(
+                    fontFamily: 'SF Compact Display',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$remaining',
+                  style: const TextStyle(
+                    fontFamily: 'SF Compact Display',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    height: 1.1,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -283,110 +345,71 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     );
   }
 
-  Widget _buildClearFiltersButton() {
-    return GestureDetector(
-      onTap: _clearFilters,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        child: const Text(
-          'Clear Filters',
-          style: AppStyles.chipFilter,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWordList() {
-    final List<Map<String, dynamic>> words = [
-      {'word': 'away', 'category': 'Sight Words', 'color': Color(0xFF7498C4), 'completed': true},
-      {'word': 'blue', 'category': 'Sight Words', 'color': Color(0xFF7498C4), 'completed': false},
-      {'word': 'cat', 'category': 'Minimal Pairs', 'color': Color(0xFFC99379), 'completed': false},
-    ];
-
+  Widget _buildProgressBar(double progress) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        children: words.map((wordData) => _buildWordItem(
-          wordData['word'] as String,
-          wordData['category'] as String,
-          wordData['color'] as Color,
-          wordData['completed'] as bool,
-        )).toList(),
-      ),
-    );
-  }
-
-  Widget _buildWordItem(String word, String category, Color categoryColor, bool completed) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/student-word-practice');
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        height: 64,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: const Color(0xFFF88843), width: 1.5),
-        ),
-        child: Row(
+      height: 20,
+      // padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Stack(
         children: [
           Container(
-            width: 10,
-            height: 64,
+            height: 8,
             decoration: BoxDecoration(
-              color: categoryColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(10),
-                bottomLeft: Radius.circular(10),
-              ),
+              color: const Color(0xFF787878).withOpacity(0.20),
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
-          const SizedBox(width: 10),
-          _buildCheckIcon(completed),
-          Expanded(
-            child: Center(
-              child: Text(
-                word,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'SF Pro',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                  height: 0.92,
+          if (progress > 0)
+            FractionallySizedBox(
+              widthFactor: progress,
+              child: Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0088FF),
+                  borderRadius: BorderRadius.circular(3),
+                  border: progress > 0.05 ? Border.all(color: Colors.black, width: 1) : null,
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 20),
         ],
-      ),
       ),
     );
   }
 
-  Widget _buildCheckIcon(bool completed) {
-    if (completed) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: SvgPicture.asset(
-          'assets/icons/circle-check-filled-svgrepo-com.svg',
-          width: 15,
-          semanticsLabel: 'Checkmark',
-        ),
-      );
-    } else {
-      return Container(
-        width: 38,
-        height: 38,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFFD9D9D9),
-        ),
-      );
-    }
+  Widget _buildCheckIcon() {
+    return SvgPicture.asset(
+      'assets/icons/circle-check-filled-svgrepo-com.svg',
+      width: 40,
+      height: 40,
+      semanticsLabel: 'Green Check',
+    );
+  }
+
+  Widget _buildLockIcon({required Color color}) {
+    return SvgPicture.asset(
+      'assets/icons/lock-svgrepo-com.svg',
+      width: 40,
+      height: 40,
+      semanticsLabel: 'Lock',
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    );
+  }
+
+  Widget _buildUnLockIcon({required Color color}) {
+    return SvgPicture.asset(
+      'assets/icons/lock-unlocked-svgrepo-com.svg',
+      width: 40,
+      height: 40,
+      semanticsLabel: 'Unlock',
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    );
+  }
+
+  Widget _buildFireIcon() {
+    return SvgPicture.asset(
+      'assets/mascot/campfire.svg',
+      width: 23,
+      height: 23,
+      semanticsLabel: 'Campfire',
+    );
   }
 }

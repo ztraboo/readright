@@ -9,6 +9,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
+import 'package:readright/models/attempt_model.dart';
+import 'package:readright/models/user_model.dart';
+import 'package:readright/services/attempt_repository.dart';
+import 'package:readright/services/user_repository.dart';
+import 'package:readright/services/word_respository.dart';
+import 'package:readright/utils/enums.dart';    
 
 class StudentWordFeedbackPage extends StatefulWidget {
 
@@ -19,6 +25,11 @@ class StudentWordFeedbackPage extends StatefulWidget {
 }
 
 class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
+
+  late final UserModel? _currentUser;
+  String? practiceWord = '';
+  WordLevel? wordLevel;
+  bool hasNextWord = true;
 
   int _currentScore = 0;
   Uint8List? _pcmBytes;
@@ -35,11 +46,15 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         setState(() {
           _attemptResult = args['attemptResult'] as AssessmentResult?;
           _pcmBytes = args['pcmBytes'] as Uint8List?;
+          practiceWord = args['practiceWord'] as String?;
+          wordLevel = args['wordLevel'] as WordLevel?;
         });
       } else if (args is Map) {
         setState(() {
           _attemptResult = args['attemptResult'];
           _pcmBytes = args['pcmBytes'] as Uint8List?;
+          practiceWord = args['practiceWord'] as String?;
+          wordLevel = args['wordLevel'] as WordLevel?;
         });
       }
 
@@ -54,6 +69,24 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         });
       }
     }); 
+
+    UserRepository().fetchCurrentUser().then((user) {
+      _currentUser = user;
+
+      if (_currentUser == null) {
+        debugPrint(
+          'StudentWordFeedbackPage: No user is currently signed in.',
+        );
+      } else {
+        debugPrint(
+          'StudentWordFeedbackPage: User UID: ${_currentUser.id}, Username: ${_currentUser.username}, Email: ${_currentUser.email}, Role: ${_currentUser.role.name}',
+        );
+      }
+    })
+    .catchError((error) {
+      debugPrint('Error fetching current user: $error');
+    });
+
   } 
 
   // Normalize raw score to 0..5 integer stars based on rawScore input of 0..1 or 0..100 pecentage value.
@@ -112,6 +145,43 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
+  Future<String?> _fetchUsersNextWord(WordLevel wordLevel) async {
+    // Compute the next word for the user to practice in the given word level.
+    // This implementation awaits the user's attempts so the local variable is initialized
+    // before being used, and avoids unnecessary null-coalescing on word text.
+
+    try {
+      // Fetch attempts for the current user from the database (await so userAttempts is initialized).
+      final List<AttemptModel> userAttempts = await AttemptRepository().fetchAttemptsByUser(
+        _currentUser?.id ?? '',
+        classId: 'cXEZyKGck7AHvcP6Abvn',
+      );
+      debugPrint('Fetched ${userAttempts.length} attempts for user ${_currentUser?.id}');
+
+      final words = await WordRepository().fetchLevelWords(wordLevel);
+      // Map to word text; use whereType to filter out any nulls if text is nullable.
+      final wordTexts = words.map((w) => w.text).whereType<String>().toList();
+
+      if (wordTexts.isEmpty) return '';
+      if (userAttempts.isEmpty) return wordTexts.first;
+
+      // Find the first word that the user has not yet attempted.
+      final practiceWord = wordTexts.firstWhere(
+        (word) {
+          final attemptsForWord = userAttempts.where((a) => a.wordId == word);
+          // Select the word if there are no attempts yet.
+          return attemptsForWord.isEmpty;
+        },
+        orElse: () => wordTexts.first,
+      );
+      debugPrint('Selected next word for level ${wordLevel.name}: $practiceWord');
+      return practiceWord;
+    } catch (e) {
+      debugPrint('Error fetching next word for level ${wordLevel.name}: $e');
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,7 +210,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
                 children: [
                   _buildRetryButton(),
                   const SizedBox(width: 20),
-                  _buildDashboardButton(),
+                  _buildDashboardNextButton(),
                 ],
               ),
             ],
@@ -175,10 +245,10 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               ),
             ),
             const SizedBox(height: 19),
-            const SizedBox(
+            SizedBox(
               width: 349,
               child: Text(
-                'cat',
+                practiceWord ?? '',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'SF Pro Display',
@@ -401,19 +471,42 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
-  Widget _buildDashboardButton() {
+  Widget _buildDashboardNextButton() {
     return GestureDetector(
-      onTap: _handleDashboard,
+      onTap: () async {
+        // Fetch the next word for the user at the current word level.
+        // TODO: Need to put this in the init() method and store 
+        // state rather than calling it here potentially on a tap.
+        (_fetchUsersNextWord(wordLevel as WordLevel)).then((word) {
+          debugPrint('Next word for user ${_currentUser?.id} at level ${wordLevel?.name} is: $word');
+          if (word != null && word.isNotEmpty) {
+            Navigator.pushNamed(
+              context,
+              '/student-word-practice',
+              arguments: {
+                'practiceWord': word,
+                'wordLevel': wordLevel,
+              },
+            );
+          } else {
+            setState(() {
+              hasNextWord = false;
+            });
+          
+            _handleDashboard();
+          }
+        });
+      },
       child: Container(
         height: 44,
         width: 160,
         decoration: BoxDecoration(
-          color: AppColors.buttonPrimaryBlue,
+          color: (hasNextWord == true ? AppColors.buttonSecondaryGreen : AppColors.buttonPrimaryBlue),
           borderRadius: BorderRadius.circular(1000),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
-            'DASHBOARD',
+            (hasNextWord == true ? 'NEXT' : 'DASHBOARD'),
             style: AppStyles.buttonText,
           ),
         ),
