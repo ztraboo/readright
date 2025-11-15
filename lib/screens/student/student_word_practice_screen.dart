@@ -17,6 +17,7 @@ import 'package:readright/audio/stt/on_device/cheetah_assessor.dart';
 import 'package:readright/audio/stt/pronunciation_assessor.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:readright/models/attempt_model.dart';
+import 'package:readright/models/user_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 // import 'package:readright/models/user_model.dart';
 import 'package:readright/services/user_repository.dart';
@@ -46,9 +47,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   Timer? _recordTimer;
   int _msElapsed = 0; // milliseconds elapsed during recording
 
-  // late final UserModel? userModel;
-  late String username;
-  String? practiceWord = 'cat';
+  late final UserModel? _currentUser;
+  String? practiceWord = '';
+  late final WordLevel? wordLevel;
 
   final FlutterTts flutterTts = FlutterTts();
 
@@ -67,40 +68,56 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize the PCM player now. The recorder will manage microphone
-    // permission and initialize itself on start().
-    _initPCMPlayer();
-
-    // Initialize the PCM recorder if not already initialized
-    _initPCMRecorder();
-
-    // Check to see if the recorder has permissions for the microphone.
-    checkRecorderPermission();
-
-    // Start listening to the assessor stream after recorder is started.
-    // This avoids an issue with the UI stop counter not updating if the
-    // recorder is started/stopped multiple times.
-    _startSTTAccessor();
-
-    UserRepository()
-        .fetchCurrentUser()
-        .then((user) {
-          if (user == null) {
-            debugPrint(
-              'StudentWordPracticePage: No user is currently signed in.',
-            );
-          } else {
-            debugPrint(
-              'StudentWordPracticePage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}',
-            );
-            username = user.username;
-          }
-        })
-        .catchError((error) {
-          debugPrint('Error fetching current user: $error');
+    // Grab passed arguments from Navigator
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        setState(() {
+          practiceWord = args['practiceWord'] as String?;
+          wordLevel = args['wordLevel'] as WordLevel?;
         });
+      } else if (args is Map) {
+        setState(() {
+          practiceWord = args['practiceWord'] as String?;
+          wordLevel = args['wordLevel'] as WordLevel?;
+        });
+      }
+      debugPrint('StudentWordPracticePage - Practice Word: $practiceWord, Word Level: ${wordLevel?.name}');
+    });
 
-    username = 'unknown';
+    if (practiceWord != null || practiceWord!.isEmpty) {
+      // Initialize the PCM player now. The recorder will manage microphone
+      // permission and initialize itself on start().
+      _initPCMPlayer();
+
+      // Initialize the PCM recorder if not already initialized
+      _initPCMRecorder();
+
+      // Check to see if the recorder has permissions for the microphone.
+      checkRecorderPermission();
+
+      // Start listening to the assessor stream after recorder is started.
+      // This avoids an issue with the UI stop counter not updating if the
+      // recorder is started/stopped multiple times.
+      _startSTTAccessor();
+    }
+
+    UserRepository().fetchCurrentUser().then((user) {
+      _currentUser = user;
+
+      if (_currentUser == null) {
+        debugPrint(
+          'StudentWordPracticePage: No user is currently signed in.',
+        );
+      } else {
+        debugPrint(
+          'StudentWordPracticePage: User UID: ${_currentUser.id}, Username: ${_currentUser.username}, Email: ${_currentUser.email}, Role: ${_currentUser.role.name}',
+        );
+      }
+    })
+    .catchError((error) {
+      debugPrint('Error fetching current user: $error');
+    });
   }
 
   // Initialize the PCM player now. The recorder will manage microphone permission.
@@ -233,7 +250,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     final fileName = path.basename(filePath);
     final storageRef = FirebaseStorage.instance.ref().child(
-      'audio/$username/$practiceWord/$fileName',
+      'audio/${_currentUser?.username ?? 'unknown'}/$practiceWord/$fileName',
     );
 
     try {
@@ -268,7 +285,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   Future<String> getAudioFilePath({String ext = 'aac'}) async {
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '${dir.path}/${username}_${practiceWord}_$timestamp.$ext';
+    return '${dir.path}/${_currentUser?.username ?? 'unknown'}_${practiceWord}_$timestamp.$ext';
   }
 
   Future<void> _handleRecord() async {
@@ -421,15 +438,15 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
       // Store attempt record in Firestore
       await storeAttempt(
-        classId: 'class001', // TODO: Replace with actual class ID 
+        classId: 'cXEZyKGck7AHvcP6Abvn', // TODO: Replace with actual class ID 
         userId: await UserRepository().fetchCurrentUser()
             .then((user) => user?.id ?? 'unknown_user'),
         wordId: practiceWord ?? 'word_placeholder',
         transcript: _lastTranscript ?? '',
         audioPath: fbStoragePath ?? '',
         durationMS: pcmBytes.length ~/ 32, // approximate duration
-        confidence: 0.0, // TODO: Replace with actual confidence
-        score: 0.0, // TODO: Replace with actual score
+        confidence: attemptResult?.confidence ?? 0.0,
+        score: attemptResult?.score ?? 0.0,
         audioCodec: (() {
           final p = uploadPath ?? '';
           final ext = path.extension(p).toLowerCase();
@@ -494,6 +511,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         arguments: {
           'pcmBytes': _pcmRecorder.getBufferedPcmBytes(),
           'attemptResult': attemptResult,
+          'practiceWord': practiceWord,
+          'wordLevel': wordLevel,
         });
 
     // Reset the processing recording state after a short delay.
@@ -521,6 +540,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     await flutterTts.setPitch(1);
     await flutterTts.setSpeechRate(0.4);
     await flutterTts.speak(word);
+  }
+
+  void _handleDashboard() {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/student-word-dashboard',
+      (Route<dynamic> route) => false,
+    );
   }
 
   @override
@@ -551,11 +578,34 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       backgroundColor: Colors.white,
       body: SafeArea(
         top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 19),
+        child: 
+          (practiceWord == null) 
+            ? Padding(
+              padding: const EdgeInsets.all(36.0),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Error',
+                      style: AppStyles.headerText,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No words are available to practice for this category level. Please return to the word dashboard.',
+                      style: AppStyles.subheaderText,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildDashboardButton(),
+                  ],
+                ),
+              ),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 19),
               _buildYetiIllustration(),
               const SizedBox(height: 18),
               // _buildSentenceSection(),
@@ -856,6 +906,26 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       onPressed: () {
         _handleTts('$practiceWord');
       },
+    );
+  }
+
+  Widget _buildDashboardButton() {
+    return GestureDetector(
+      onTap: _handleDashboard,
+      child: Container(
+        height: 44,
+        width: 160,
+        decoration: BoxDecoration(
+          color: AppColors.buttonPrimaryBlue,
+          borderRadius: BorderRadius.circular(1000),
+        ),
+        child: const Center(
+          child: Text(
+            'DASHBOARD',
+            style: AppStyles.buttonText,
+          ),
+        ),
+      ),
     );
   }
 }

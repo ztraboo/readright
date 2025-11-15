@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 
 // Enumaration for audio codecs used in the application.
 // ---------------------------------------------------------------
@@ -20,6 +21,12 @@ extension AudioCodecExtension on AudioCodec {
 // Enumeration for different word levels used in the application.
 // Keep the order of the enum values as is; they represent increasing difficulty/order. 
 // ---------------------------------------------------------------
+enum WordLevelState {
+  isLocked,
+  isUnlocked,
+  isCompleted
+}
+
 enum WordLevel {
   prePrimer,
   primer,
@@ -42,15 +49,34 @@ extension WordCategoryExtension on WordLevel {
       WordLevel.fifthGrade => 'Fifth Grade',
       WordLevel.custom => 'Custom',
   };
+
+  Color get backgroundColor => switch (this) {
+      WordLevel.prePrimer =>  const Color(0xFFE3F2FD), // Light Blue
+      WordLevel.primer => const Color(0xFFFFF9C4), // Light Yellow
+      WordLevel.firstGrade => const Color(0xFFC8E6C9), // Light Green
+      WordLevel.secondGrade => const Color(0xFFFFE0B2), // Light Orange
+      WordLevel.thirdGrade => const Color(0xFFD1C4E9), // Light Purple
+      WordLevel.fourthGrade => const Color(0xFFFFCDD2), // Light Red
+      WordLevel.fifthGrade => const Color(0xFFB2DFDB), // Light Teal
+      WordLevel.custom => const Color(0xFFE0E0E0), // Light Grey
+  };
+
 }
 
 /// Helper function to convert a string to a WordLevel enum value.
 WordLevel wordLevelFromString(String level) {
-  try {
-    return WordLevel.values.byName(level);
-  } catch (_) {
-    return WordLevel.custom;
+  final input = level.trim().toLowerCase();
+  for (final wl in WordLevel.values) {
+    // match by enum identifier (e.g. "prePrimer", "firstGrade")
+    if (wl.toString().split('.').last.toLowerCase() == input) {
+      return wl;
+    }
+    // match by display name from the extension (e.g. "Pre-Primer", "First Grade")
+    if (wl.name.toLowerCase() == input) {
+      return wl;
+    }
   }
+  return WordLevel.custom;
 } 
 
 // Order levels by their enum order

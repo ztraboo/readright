@@ -20,6 +20,7 @@ class AppColors {
   static const Color buttonPrimaryBlue = Color(0xFF7498C4);
   static const Color buttonPrimaryOrange = Color(0xFFF0695B);
   static const Color buttonSecondaryRed = Color(0xFFFF3939);
+  static const Color buttonSecondaryGreen = Color(0xFF3E9E1E);
 
   // Progress indicator colors
   // ----------------------------------
