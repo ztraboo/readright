@@ -1,0 +1,8 @@
+# Requirements for scripts in ./scripts
+# Install with: python -m pip install -r scripts/requirements.txt
+
+# ElevenLabs Python SDK used to synthesize TTS audio
+elevenlabs
+
+# Pydub for audio processing to keep consistent audio format levels.
+pydub
