@@ -7,6 +7,7 @@ import 'package:cheetah_flutter/cheetah.dart';
 
 import 'package:readright/audio/stream/pcm_recorder.dart';
 import 'package:readright/audio/stt/pronunciation_assessor.dart';
+import 'package:string_similarity/string_similarity.dart';
 
 /// On-device assessor for Cheetah (https://picovoice.ai/platform/cheetah/). 
 /// Implement provider-specific logic here.
@@ -114,12 +115,37 @@ class CheetahAssessor implements PronunciationAssessor {
       debugPrint('CheetahAssessor: flush error: $err');
     }
 
-    // TODO: compute confidence and score based on referenceText vs transcript.
+
     double confidence = 0.0;
-    
+    double score = 0.0;
+    double jaroScore = 0.0;
+    double cmuScore = 0.0;
+
+    // Normalize reference text and transcript prior to analysis
+    String normReference = normalize(referenceText);
+    String normTranscript = normalize(transcript);
+
+    // Compute Jaro-Winkler score between 0 and 1
+
+    // Analyze each word individually to avoid variability in transcript length
+    List<String> words = normTranscript.split(' ');
+    double bestScore = 0.0;
+
+    for (String word in words) {
+      jaroScore = StringSimilarity.compareTwoStrings(normReference, word);
+      print("word: $word \njaroscore: $jaroScore, \nbestscore: $bestScore");
+      if (jaroScore > bestScore) {
+        bestScore = jaroScore;
+      }
+    }
+    jaroScore = bestScore;
+
+    // TODO: compute confidence and score based on referenceText vs transcript with CMUDict
+
     // Generate a random score between 0.0 and 1.0 with two decimal places.
     // Make sure to update this calculate based on Levenshtein distance calculation.
-    double score = double.parse((Random().nextInt(101) / 100).toStringAsFixed(2));
+    score = double.parse((Random().nextInt(101) / 100).toStringAsFixed(2));
+
 
     return AssessmentResult(
       recognizedText: transcript,
@@ -136,6 +162,14 @@ class CheetahAssessor implements PronunciationAssessor {
   /// Dispose resources; after this the instance should not be used.
   Future<void> dispose() async {
     await _cheetah?.delete();
+  }
+  // helper to normalize transcript and reference word
+  // Drop digits, punctuation, and ensure lower case
+  String normalize(String subject) {
+    String normalized = subject.toLowerCase();
+    normalized = normalized.replaceAll(RegExp(r'[0-9\p{P}]', unicode: true), '');
+    normalized = normalized.trim();
+    return normalized;
   }
 
 }

@@ -58,6 +58,9 @@ dependencies:
   # speect-to-text (STT) providers
   cheetah_flutter: ^2.3.0
 
+  # Jaro-Winkler
+  string_similarity: ^2.0.0
+
 
 dev_dependencies:
   flutter_test:
