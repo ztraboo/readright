@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path/path.dart' as path;
@@ -21,6 +23,7 @@ import 'package:readright/models/user_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 // import 'package:readright/models/user_model.dart';
 import 'package:readright/services/user_repository.dart';
+import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
 import 'package:readright/utils/device_utility.dart';
@@ -28,7 +31,6 @@ import 'package:readright/utils/enums.dart';
 // Audio converter helpers centralized in audio utilities
 import 'package:readright/audio/audio_converter.dart';
 
-// import 'package:flutter_sound/flutter_sound.dart';
 // import 'package:permission_handler/permission_handler.dart';
 
 class StudentWordPracticePage extends StatefulWidget {
@@ -49,7 +51,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
   late final UserModel? _currentUser;
   String? practiceWord = '';
-  late final WordLevel? wordLevel;
+  String? practiceSentenceId;
+  int? practiceSentenceIndex;
+  String? displaySentence = '';
+  WordLevel? wordLevel;
+  
 
   final FlutterTts flutterTts = FlutterTts();
 
@@ -118,6 +124,15 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     .catchError((error) {
       debugPrint('Error fetching current user: $error');
     });
+
+    // Fetch a new sentence for the practice word.
+    fetchNewWordSentence();
+
+    // Handle the header TTS.
+    // We're only calling this here to ensure it runs after initial state setup.
+    // This will not be called again if the user traverse from
+    // the student feedback screen back to this practice screen.
+    _handleHeaderTts();
   }
 
   // Initialize the PCM player now. The recorder will manage microphone permission.
@@ -139,6 +154,19 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     _assessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
 
     await _assessor.start();
+  }
+
+  void fetchNewWordSentence() {
+      // Select a random sentence index for the practice word
+      // Normalize to match filenames
+      // Only pick a sentence index if we haven't already set one.
+      final word = practiceWord?.trim().toLowerCase();
+      final idx = (DateTime.now().millisecondsSinceEpoch % 3) + 1;
+      debugPrint('Selected sentence index: $idx for word: $word');
+      setState(() {
+        practiceSentenceId = 'sentence_$idx';
+        practiceSentenceIndex = idx;
+      });
   }
 
   // Explicit check/request microphone permission for the recorder.
@@ -374,7 +402,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     });
 
     String? uploadPath;
-    late final AssessmentResult? attemptResult;
+    AssessmentResult? attemptResult;
 
     // Save buffered PCM bytes and encode to WAV and AAC using FFmpeg.
     // Write raw PCM to a temp file, ask FFmpeg to create WAV, then AAC.
@@ -385,9 +413,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // than relying solely on per-chunk streaming results.
       try {
         attemptResult = await _assessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
-        if (mounted && attemptResult?.recognizedText.isNotEmpty == true) {
+        final recognizedText = attemptResult?.recognizedText ?? '';
+        if (mounted && recognizedText.isNotEmpty) {
           setState(() {
-            _lastTranscript = attemptResult?.recognizedText;
+            _lastTranscript = recognizedText;
           });
         }
       } catch (e, st) {
@@ -500,8 +529,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     await Future.delayed(const Duration(seconds: 3));
 
+    // Reset the word sentence if we need to practice again.
+    fetchNewWordSentence();
+
     // Pass the final uploaded path (wav if converted, otherwise original)
     if (!mounted) return;
+
     // Instead of passing a filesystem path, pass the in-memory PCM bytes
     // so the feedback screen can replay immediately from the recorder buffer.
     Navigator.of(
@@ -535,11 +568,208 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     );
   }
 
-  Future<void> _handleTts(String word) async {
-    await flutterTts.setLanguage("en-US");
-    await flutterTts.setPitch(1);
-    await flutterTts.setSpeechRate(0.4);
-    await flutterTts.speak(word);
+  Future<void> _handleLetsPronouceWordSentence() async {
+      // Try a small pre-check to ensure the asset exists in the bundle before
+    // asking the native audio plugin to play it. This avoids opaque native
+    // errors when the asset is missing or wasn't bundled into the app.
+    // Asset keys must not start with "./"; use the asset path as declared in
+    // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
+    // rootBundle.load(...) to fail with "Unable to load asset".
+
+    final assetPath = 'assets/audio/phrases/lets_pronounce_the_word.mp3';
+    ByteData assetData;
+    try {
+      assetData = await rootBundle.load(assetPath);
+    } catch (assetErr) {
+      debugPrint('TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      return;
+    }
+
+    // Play using flutter_sound's player (plays from in-memory buffer).
+    final player = FlutterSoundPlayer();
+    final completer = Completer<void>();
+    try {
+        try {
+          await player.openPlayer();
+        } catch (openErr) {
+          debugPrint('flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          return;
+        }
+
+        try {
+          await player.startPlayer(
+            fromDataBuffer: assetData.buffer.asUint8List(),
+            codec: Codec.mp3,
+            whenFinished: () {
+            if (!completer.isCompleted) completer.complete();
+            },
+          );
+        } catch (startErr) {
+          debugPrint('flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          return;
+        }
+
+        // Wait until playback completes (whenFinished completes the completer).
+        await completer.future;
+      } catch (playErr) {
+        debugPrint('Asset playback error: $playErr, falling back to TTS.');
+        return;
+      } finally {
+        // Best-effort cleanup. Ignore individual errors but log them.
+        try {
+          await player.stopPlayer();
+        } catch (stopErr) {
+          debugPrint('Error stopping flutter_sound player: $stopErr');
+        }
+        try {
+          await player.closePlayer();
+        } catch (closeErr) {
+          debugPrint('Error closing flutter_sound audio session: $closeErr');
+        }
+      }
+  }
+
+  Future<void> _handleTtsWord(String rawWord) async {
+    // Try a small pre-check to ensure the asset exists in the bundle before
+    // asking the native audio plugin to play it. This avoids opaque native
+    // errors when the asset is missing or wasn't bundled into the app.
+    // Asset keys must not start with "./"; use the asset path as declared in
+    // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
+    // rootBundle.load(...) to fail with "Unable to load asset".
+
+    final word = rawWord.trim().toLowerCase(); // normalize to match filenames
+    final assetPath = 'assets/audio/words/$word.mp3';
+    ByteData assetData;
+    try {
+      assetData = await rootBundle.load(assetPath);
+    } catch (assetErr) {
+      debugPrint('TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      await _speakTts(word);
+      return;
+    }
+
+    // Play using flutter_sound's player (plays from in-memory buffer).
+    final player = FlutterSoundPlayer();
+    final completer = Completer<void>();
+    try {
+        try {
+          await player.openPlayer();
+        } catch (openErr) {
+          debugPrint('flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          await _speakTts(word);
+          return;
+        }
+
+        try {
+          await player.startPlayer(
+            fromDataBuffer: assetData.buffer.asUint8List(),
+            codec: Codec.mp3,
+            whenFinished: () {
+            if (!completer.isCompleted) completer.complete();
+            },
+          );
+        } catch (startErr) {
+          debugPrint('flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          await _speakTts(word);
+          return;
+        }
+
+        // Wait until playback completes (whenFinished completes the completer).
+        await completer.future;
+      } catch (playErr) {
+        debugPrint('Asset playback error: $playErr, falling back to TTS.');
+        await _speakTts(word);
+        return;
+      } finally {
+        // Best-effort cleanup. Ignore individual errors but log them.
+        try {
+          await player.stopPlayer();
+        } catch (stopErr) {
+          debugPrint('Error stopping flutter_sound player: $stopErr');
+        }
+        try {
+          await player.closePlayer();
+        } catch (closeErr) {
+          debugPrint('Error closing flutter_sound audio session: $closeErr');
+        }
+      }
+  }
+
+  Future<void> _handleTtsWordSentence(String rawWord, String practiceSentenceId) async {
+    // Try a small pre-check to ensure the asset exists in the bundle before
+    // asking the native audio plugin to play it. This avoids opaque native
+    // errors when the asset is missing or wasn't bundled into the app.
+    // Asset keys must not start with "./"; use the asset path as declared in
+    // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
+    // rootBundle.load(...) to fail with "Unable to load asset".
+
+    final word = rawWord.trim().toLowerCase(); // normalize to match filenames
+    final assetPath = 'assets/audio/sentences/${word}_${practiceSentenceId}.mp3';
+    ByteData assetData;
+    try {
+      assetData = await rootBundle.load(assetPath);
+    } catch (assetErr) {
+      debugPrint('TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      await _speakTts(word);
+      return;
+    }
+
+    // Play using flutter_sound's player (plays from in-memory buffer).
+    final player = FlutterSoundPlayer();
+    final completer = Completer<void>();
+    try {
+        try {
+          await player.openPlayer();
+        } catch (openErr) {
+          debugPrint('flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          await _speakTts(word);
+          return;
+        }
+
+        try {
+          await player.startPlayer(
+            fromDataBuffer: assetData.buffer.asUint8List(),
+            codec: Codec.mp3,
+            whenFinished: () {
+            if (!completer.isCompleted) completer.complete();
+            },
+          );
+        } catch (startErr) {
+          debugPrint('flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          await _speakTts(word);
+          return;
+        }
+
+        // Wait until playback completes (whenFinished completes the completer).
+        await completer.future;
+      } catch (playErr) {
+        debugPrint('Asset playback error: $playErr, falling back to TTS.');
+        await _speakTts(word);
+        return;
+      } finally {
+        // Best-effort cleanup. Ignore individual errors but log them.
+        try {
+          await player.stopPlayer();
+        } catch (stopErr) {
+          debugPrint('Error stopping flutter_sound player: $stopErr');
+        }
+        try {
+          await player.closePlayer();
+        } catch (closeErr) {
+          debugPrint('Error closing flutter_sound audio session: $closeErr');
+        }
+      }
+  }
+
+  Future<void> _speakTts(String word) async {
+    try {
+      await flutterTts.setLanguage('en-US');
+      await flutterTts.setPitch(1.0);
+      await flutterTts.setSpeechRate(0.45);
+      await flutterTts.speak(word);
+    } catch (e) {
+      debugPrint('TTS speak failed: $e');
+    }
   }
 
   void _handleDashboard() {
@@ -606,30 +836,41 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 19),
-              _buildYetiIllustration(),
-              const SizedBox(height: 18),
-              // _buildSentenceSection(),
-              // const SizedBox(height: 0),
-              _buildInstructions(),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildRecordButton(),
+                  _buildYetiIllustration(),
+                  const SizedBox(height: 18),
+                  _buildSentenceSection(),
+                  const SizedBox(height: 0),
+                  _buildInstructions(),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildRecordButton(),
 
-                  // Only used for testing REPLAY on this screen for
-                  // debugging purposes with the audio stream.
-                  // const SizedBox(width: 20),
-                  // _buildReplayButton()
+                      // Only used for testing REPLAY on this screen for
+                      // debugging purposes with the audio stream.
+                      // const SizedBox(width: 20),
+                      // _buildReplayButton()
+                    ],
+                  ),              
+                  const SizedBox(height: 24),
+                  _buildMicrophoneDecibelLevelIndicator(),
                 ],
-              ),              
-              const SizedBox(height: 24),
-              _buildMicrophoneDecibelLevelIndicator(),
-            ],
-          ),
-        ),
+              ),
+            ),
       ),
     );
+  }
+
+  void _handleHeaderTts() async {
+    // Recite the header to the user on load.
+    if (!_isRecording && !_isProcessingRecording) {
+      Future.microtask(() async {
+        // Ensure the prompt audio plays first, then the word audio.
+        await _handleLetsPronouceWordSentence();
+        await _handleTtsWord('$practiceWord');
+      });
+    }
   }
 
   Widget _buildHeader() {
@@ -663,7 +904,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   ),
                 ),
                 const SizedBox(width: 10),
-                _buildTtsButton(),
+                _buildTtsWordButton(),
               ],
             ),
             const SizedBox(height: 20),
@@ -685,66 +926,151 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     );
   }
 
-  // Widget _buildSentenceSection() {
-  //   return Container(
-  //     width: double.infinity,
-  //     height: 77,
-  //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-  //     decoration: BoxDecoration(
-  //       color: const Color(0xFFFFC6C0).withOpacity(0.20),
-  //     ),
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.center,
-  //       crossAxisAlignment: CrossAxisAlignment.center,
-  //       children: [
-  //         SvgPicture.asset(
-  //           'assets/icons/quote-open-editor-svgrepo-com.svg',
-  //           width: 23,
-  //           height: 23,
-  //           semanticsLabel: 'Quote Open',
-  //         ),
-  //         const SizedBox(width: 4),
-  //         Flexible(
-  //           child: Text.rich(
-  //             TextSpan(
-  //               children: [
-  //                 const TextSpan(
-  //                   text: 'The ',
-  //                   style: AppStyles.subheaderText,
-  //                 ),
-  //                 TextSpan(
-  //                   text: '$practice_word',
-  //                   style: AppStyles.subheaderTextBold,
-  //                 ),
-  //                 const TextSpan(
-  //                   text: ' is sleeping on the bed.',
-  //                   style: AppStyles.subheaderText,
-  //                 ),
-  //               ],
-  //             ),
-  //             textAlign: TextAlign.center,
-  //           ),
-  //         ),
-  //         const SizedBox(width: 4),
-  //         SvgPicture.asset(
-  //           'assets/icons/quote-close-editor-svgrepo-com.svg',
-  //           width: 23,
-  //           height: 23,
-  //           semanticsLabel: 'Quote Close',
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+  Widget _buildHighLightedWordInSentence({
+    required String sentence,
+    required String wordToHighlight,
+    required TextStyle textStyle,
+    required TextStyle highlightStyle,
+  }) {
+    // Guard for empty inputs
+    if (sentence.isEmpty || wordToHighlight.trim().isEmpty) {
+      return Flexible(
+        child: Text(
+          sentence,
+          textAlign: TextAlign.center,
+          style: textStyle,
+        ),
+      );
+    }
+
+    // Build a regex that matches the target word as a whole word, case-insensitive.
+    final escaped = RegExp.escape(wordToHighlight.trim());
+    final regex = RegExp(r'\b' + escaped + r'\b', caseSensitive: false);
+
+    final matches = regex.allMatches(sentence).toList();
+
+    // If there are no matches, just return the plain sentence.
+    if (matches.isEmpty) {
+      return Flexible(
+        child: Text(
+          sentence,
+          textAlign: TextAlign.center,
+          style: textStyle,
+        ),
+      );
+    }
+
+    // Build TextSpans preserving original casing from the sentence:
+    final spans = <TextSpan>[];
+    var lastIndex = 0;
+    for (final m in matches) {
+      if (m.start > lastIndex) {
+        spans.add(TextSpan(
+          text: sentence.substring(lastIndex, m.start),
+          style: textStyle,
+        ));
+      }
+      spans.add(TextSpan(
+        text: sentence.substring(m.start, m.end),
+        style: highlightStyle,
+      ));
+      lastIndex = m.end;
+    }
+    if (lastIndex < sentence.length) {
+      spans.add(TextSpan(
+        text: sentence.substring(lastIndex),
+        style: textStyle,
+      ));
+    }
+
+    return Flexible(
+      child: RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          children: spans,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSentenceSection() {
+    if (!mounted) return Container();
+
+    return (wordLevel == null)
+      ? CircularProgressIndicator()
+      : FutureBuilder<dynamic>(
+        future: WordRepository().fetchWordByTextAndLevel(
+          practiceWord!,
+          wordLevel!,
+        ),
+        builder: (context, snapshot) {
+          // debugPrint('Word fetch snapshot: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
+
+          if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+            try {
+              // Offset by -1 to convert 1-based index to 0-based list index for what's stored in the Firestore.
+              final sentences = snapshot.data?.sentences;
+              if (sentences is List && sentences.length > (practiceSentenceIndex! - 1)) {
+                displaySentence = sentences[practiceSentenceIndex! - 1] as String? ?? '';
+              }
+            } catch (e) {
+                displaySentence = '';
+            }
+          }
+
+          if (displaySentence?.isEmpty ?? true) {
+            // Fallback sentence if repository didn't provide one.
+            displaySentence = '...';
+          }
+
+          return Container(
+            width: double.infinity,
+            height: 77,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFC6C0).withOpacity(0.20),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/quote-open-editor-svgrepo-com.svg',
+                  width: 23,
+                  height: 23,
+                  semanticsLabel: 'Quote Open',
+                ),
+                const SizedBox(width: 4),
+                _buildHighLightedWordInSentence(
+                  sentence: displaySentence ?? '',
+                  wordToHighlight: practiceWord!,
+                  textStyle: AppStyles.subheaderText,
+                  highlightStyle: AppStyles.subheaderTextBold,
+                ),
+                const SizedBox(width: 4),
+                SvgPicture.asset(
+                  'assets/icons/quote-close-editor-svgrepo-com.svg',
+                  width: 23,
+                  height: 23,
+                  semanticsLabel: 'Quote Close',
+                ),
+                const SizedBox(width: 8),
+                _buildTtsWordSentenceButton(),
+              ],
+            ),
+          );
+        },
+      );
+  }
 
   Widget _buildInstructions() {
     return Container(
       width: double.infinity,
       height: 86,
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFC6C0).withOpacity(0.20),
-      ),
+      // decoration: BoxDecoration(
+      //   color: const Color(0xFFFFC6C0).withOpacity(0.20),
+      // ),
       child: const Center(
         child: SizedBox(
           width: 349,
@@ -897,14 +1223,36 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     );
   }
 
-  Widget _buildTtsButton() {
+  Widget _buildTtsWordButton() {
+    // Disable audio button while recording or processing to prevent cheating.
     return IconButton(
       icon: Icon(Icons.volume_up),
-      color: Colors.green,
+      color: (!_isRecording && !_isProcessingRecording)
+              ? Colors.green
+              : Colors.grey,
       iconSize: 40,
-      tooltip: 'Play Example',
+      tooltip: 'Play Practice Word',
       onPressed: () {
-        _handleTts('$practiceWord');
+        (!_isRecording && !_isProcessingRecording)
+          ? _handleTtsWord('$practiceWord')
+          : null;
+      },
+    );
+  }
+
+  Widget _buildTtsWordSentenceButton() {
+    // Disable audio button while recording or processing to prevent cheating.
+    return IconButton(
+      icon: Icon(Icons.volume_up),
+      color: (!_isRecording && !_isProcessingRecording)
+              ? Colors.green
+              : Colors.grey,
+      iconSize: 40,
+      tooltip: 'Play Practice Word Sentence',
+      onPressed: () {
+        (!_isRecording && !_isProcessingRecording)
+            ? _handleTtsWordSentence('$practiceWord', '$practiceSentenceId')
+            : null;
       },
     );
   }

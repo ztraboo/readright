@@ -48,6 +48,19 @@ class WordRepository {
     return null;
   } 
 
+  // Fetch a word by its text and level from Firestore
+  Future<WordModel?> fetchWordByTextAndLevel(String text, WordLevel level) async {
+    final querySnapshot = await _db.collection('words')
+      .where('text', isEqualTo: text)
+      .where('level', isEqualTo: level.name)
+      .limit(1)
+      .get();
+    if (querySnapshot.docs.isNotEmpty) {
+      return WordModel.fromJson(querySnapshot.docs.first.data());
+    }
+    return null;
+  }
+
   // Fetch level words from Firestore ordered by levelOrder ascending.
   Future<List<WordModel>> fetchLevelWords(WordLevel level) async {
     final querySnapshot = await _db.collection('words')

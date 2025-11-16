@@ -21,26 +21,14 @@ import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
 
 // import 'package:readright/services/user_repository.dart';
-// import 'package:readright/utils/seed_words_uploader.dart'
+// import 'package:readright/utils/seed_words_uploader.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Defer Firebase initialization so the app can render its first frame
-  // faster. Firebase will initialize in the background after runApp().
-  // Note: code that depends on Firebase being initialized should either
-  // await initialization or handle the uninitialized state.
 
   // Ensure no user is signed in at app start
   // await UserRepository().signOutCurrentUser();
 
-  // Manually upload seed words from asset on app start
-  // We do this here to ensure it's done once when the app starts.
-  // This is a one-time operation; in a real app, you'd likely remove this after the initial upload.
-  // SeedWordsUploader.uploadFromAsset().then((_) {
-  //   debugPrint('Seed words upload completed.');
-  // }).catchError((e) {
-  //   debugPrint('Seed words upload failed: $e');
-  // });
 
   // Anonymous sign-in for development/testing
   // try {
@@ -61,6 +49,15 @@ Future<void> main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       debugPrint('Firebase initialized');
+
+      // Manually upload seed words from asset on app start
+      // We do this here to ensure it's done once when the app starts.
+      // This is a one-time operation; in a real app, you'd likely remove this after the initial upload.
+      // SeedWordsUploader.uploadFromAsset().then((_) {
+      //   debugPrint('Seed words upload completed.');
+      // }).catchError((e) {
+      //   debugPrint('Seed words upload failed: $e');
+      // });
 
       // FirestoreUtils.renameCollection('students', 'student.progress').then((_) {
       //   debugPrint('Collection rename completed.');
