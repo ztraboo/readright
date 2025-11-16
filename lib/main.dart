@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:readright/utils/firestore_utils.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
@@ -60,6 +61,13 @@ Future<void> main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       debugPrint('Firebase initialized');
+
+      // FirestoreUtils.renameCollection('students', 'student.progress').then((_) {
+      //   debugPrint('Collection rename completed.');
+      // }).catchError((e, st) {
+      //   debugPrint('Collection rename failed: $e\n$st');
+      // });
+
     } catch (e, st) {
       debugPrint('Firebase initialization failed: $e\n$st');
     }

@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 
 /// Small utility helpers used by Firestore-backed models.
@@ -25,6 +25,18 @@ class FirestoreUtils {
     final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
+  }
+
+  static Future<void> renameCollection(String oldName, String newName) async {
+    final oldRef = FirebaseFirestore.instance.collection(oldName);
+    final newRef = FirebaseFirestore.instance.collection(newName);
+
+    final snap = await oldRef.get();
+
+    for (final doc in snap.docs) {
+      await newRef.doc(doc.id).set(doc.data());
+      await oldRef.doc(doc.id).delete();
+    }
   }
 
 }
