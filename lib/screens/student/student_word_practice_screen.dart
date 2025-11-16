@@ -132,7 +132,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     // We're only calling this here to ensure it runs after initial state setup.
     // This will not be called again if the user traverse from
     // the student feedback screen back to this practice screen.
-    _handleHeaderTts();
+    _handleIntroductionTts();
   }
 
   // Initialize the PCM player now. The recorder will manage microphone permission.
@@ -862,13 +862,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     );
   }
 
-  void _handleHeaderTts() async {
+  void _handleIntroductionTts() async {
     // Recite the header to the user on load.
     if (!_isRecording && !_isProcessingRecording) {
       Future.microtask(() async {
         // Ensure the prompt audio plays first, then the word audio.
         await _handleLetsPronouceWordSentence();
         await _handleTtsWord('$practiceWord');
+        await _handleTtsWordSentence('$practiceWord', practiceSentenceId!);
       });
     }
   }
