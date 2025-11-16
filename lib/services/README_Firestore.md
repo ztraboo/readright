@@ -43,6 +43,14 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // student.progress
+    match /student.progress/{docId} {
+      allow read, write: if true;
+    }
+    match /student.progress/{docId}/{sub=**} {
+      allow read, write: if true;
+    }
+
     // users
     match /users/{docId} {
       allow read, write: if isSignedIn();
