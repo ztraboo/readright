@@ -69,7 +69,7 @@ class StudentRepository {
     });
 
     // Create the student details
-    await db.collection('students').doc(uid).set({
+    await db.collection('student.progress').doc(uid).set({
       'uid': uid,
       'class': classId,
       'attempts': [],

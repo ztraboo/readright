@@ -43,7 +43,7 @@ class TeacherDashboardPage extends StatelessWidget {
 
     // Get student progress
     final studentSnapshot = await FirebaseFirestore.instance
-        .collection('students')
+        .collection('student.progress')
         .where('uid', whereIn: studentUids)
         .get();
 

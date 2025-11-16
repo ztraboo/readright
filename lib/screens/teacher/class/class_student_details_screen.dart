@@ -9,7 +9,7 @@ class ClassStudentDetails extends StatelessWidget {
   Future<Map<String, dynamic>> fetchStudentData() async {
     // Fetch student document
     final studentDoc = await FirebaseFirestore.instance
-        .collection('students')
+        .collection('student.progress')
         .where('uid', isEqualTo: studentUid)
         .limit(1)
         .get();
