@@ -8,6 +8,10 @@ import 'package:cheetah_flutter/cheetah.dart';
 import 'package:readright/audio/stream/pcm_recorder.dart';
 import 'package:readright/audio/stt/pronunciation_assessor.dart';
 import 'package:string_similarity/string_similarity.dart';
+import 'package:readright/audio/stt/on_device/cmu_map.dart';
+
+// import 'package:collection/collection.dart';
+
 
 /// On-device assessor for Cheetah (https://picovoice.ai/platform/cheetah/). 
 /// Implement provider-specific logic here.
@@ -133,18 +137,47 @@ class CheetahAssessor implements PronunciationAssessor {
 
     for (String word in words) {
       jaroScore = StringSimilarity.compareTwoStrings(normReference, word);
-      print("word: $word \njaroscore: $jaroScore, \nbestscore: $bestScore");
+      debugPrint("word: $word \njaroscore: $jaroScore, \nbestscore: $bestScore");
       if (jaroScore > bestScore) {
         bestScore = jaroScore;
       }
     }
     jaroScore = bestScore;
 
-    // TODO: compute confidence and score based on referenceText vs transcript with CMUDict
+    List<String>? expectedPhonemes = cmuDict[normReference];
+    if (expectedPhonemes == null){
+      debugPrint("expectedPhonemes is NULL");
+    }
+    else {
+      bestScore = 0.0;
+      debugPrint("expectedPhonemes: $expectedPhonemes");
+      for (String word in words) {
+        List<String>? wordPhonemes = cmuDict[word];
+        if (wordPhonemes == null){
+          debugPrint("wordPhonemes is NULL for word: $word");
+        }
+        else {
+          debugPrint("comparing word, $word ($wordPhonemes) with $referenceText ($expectedPhonemes)");
+          cmuScore = comparePhonemes(expectedPhonemes, wordPhonemes);
+          debugPrint("CMUScore = $cmuScore");
+          if (cmuScore > bestScore) {
+            bestScore = cmuScore;
+          }
+        }
+      }
+      cmuScore = bestScore;
+      debugPrint("final cmuScore: $cmuScore");
+    }
 
+    // TODO: compute confidence and score
+
+    double cmuWeight = 0.7;
+    double jaroWeight = 0.3;
+    score = (cmuScore * cmuWeight) + (jaroScore* jaroWeight);
+    debugPrint("score before return: $score");
     // Generate a random score between 0.0 and 1.0 with two decimal places.
     // Make sure to update this calculate based on Levenshtein distance calculation.
-    score = double.parse((Random().nextInt(101) / 100).toStringAsFixed(2));
+    // score = double.parse((Random().nextInt(101) / 100).toStringAsFixed(2));
 
 
     return AssessmentResult(
@@ -171,5 +204,62 @@ class CheetahAssessor implements PronunciationAssessor {
     normalized = normalized.trim();
     return normalized;
   }
+
+  // Helper method to compare to lists of phonemes
+  double comparePhonemes(List<String> refPhonemes, List<String> actualPhonemes){
+    double score = 0.0;
+
+    // compare entries with Levenshtein
+    // final refStr = refPhonemes.join(' ');
+    // final actualStr = actualPhonemes.join(' ');
+    // int distance = Levenshtein.distance(refStr, actualStr);
+    int distance = levenshteinList(refPhonemes, actualPhonemes);
+    final maxLen = refPhonemes.length > actualPhonemes.length ? refPhonemes.length : actualPhonemes.length;
+
+    if (maxLen == 0){
+      debugPrint("Phoneme lists are empty");
+      return 0.0;
+    }
+
+    score = 1.0 - (distance/maxLen);
+
+    return score;
+  }
+
+  // custom Levenshtein implementation to compare lists
+  // returns number of incorrect List items
+  int levenshteinList<T>(List<String> expectedPhonemes, List<String> actualPhonemes) {
+    final expectedLength = expectedPhonemes.length;
+    final actualLength = actualPhonemes.length;
+
+    final matrix = List.generate(
+      expectedLength + 1,
+          (_) => List<int>.filled(actualLength + 1, 0),
+    );
+
+    for (var i = 0; i <= expectedLength; i++) {
+      matrix[i][0] = i;
+    }
+    for (var j = 0; j <= actualLength; j++) {
+      matrix[0][j] = j;
+    }
+
+    // Fill the matrix
+    for (var i = 1; i <= expectedLength; i++) {
+      for (var j = 1; j <= actualLength; j++) {
+        final substitutionCost =
+        expectedPhonemes[i - 1] == actualPhonemes[j - 1] ? 0 : 1;
+
+        matrix[i][j] = [
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + substitutionCost,
+        ].reduce((a, b) => a < b ? a : b);
+      }
+    }
+    return matrix[expectedLength][actualLength];
+  }
+
+
 
 }

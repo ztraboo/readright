@@ -60,6 +60,9 @@ dependencies:
 
   # Jaro-Winkler
   string_similarity: ^2.0.0
+  # Levenshtein
+#  collection: ^1.18.0
+#  levenshtein: ^0.2.2
 
 
 dev_dependencies:
