@@ -63,6 +63,8 @@ dependencies:
   # Levenshtein
 #  collection: ^1.18.0
 #  levenshtein: ^0.2.2
+  http: ^1.1.0
+  path: ^1.8.3
 
 
 dev_dependencies:

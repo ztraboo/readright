@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
@@ -15,6 +16,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:readright/audio/stream/pcm_player.dart';
 import 'package:readright/audio/stream/pcm_recorder.dart';
+import 'package:readright/audio/stt/cloud/deepgram_assessor.dart';
 import 'package:readright/audio/stt/on_device/cheetah_assessor.dart';
 import 'package:readright/audio/stt/pronunciation_assessor.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -55,7 +57,23 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   int? practiceSentenceIndex;
   String? displaySentence = '';
   WordLevel? wordLevel;
-  
+  bool online = false;
+
+  // determine if there is a valid internet connection
+  Future<bool> hasInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse('https://www.google.com'))
+          .timeout(Duration(seconds: 3));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void checkConnection() async {
+    online = await hasInternetConnection();
+    debugPrint('Online: $online');
+  }
 
   final FlutterTts flutterTts = FlutterTts();
 
@@ -66,7 +84,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   // until permission has been checked/confirmed.
   final PcmRecorder _pcmRecorder = PcmRecorder();
 
-  late final CheetahAssessor _assessor;
+  late final CheetahAssessor _cheetahAssessor;
+  DeepgramAssessor? _deepgramAssessor;
+
   String? _lastTranscript;
 
   @override
@@ -105,7 +125,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // Start listening to the assessor stream after recorder is started.
       // This avoids an issue with the UI stop counter not updating if the
       // recorder is started/stopped multiple times.
-      _startSTTAccessor();
+
+      // Execute this line only if there is no network
+      if (online == false){
+        _startSTTAccessor();
+      }
     }
 
     UserRepository().fetchCurrentUser().then((user) {
@@ -151,9 +175,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   // Start recording for the STT assessor early.
   Future<void> _startSTTAccessor() async {
     // Initialize the assessor now that _pcmRecorder is available.
-    _assessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
+    _cheetahAssessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
 
-    await _assessor.start();
+    await _cheetahAssessor.start();
   }
 
   void fetchNewWordSentence() {
@@ -411,17 +435,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // Produce a final transcript from the full buffered PCM bytes so the
       // user can see the result immediately. This is more deterministic
       // than relying solely on per-chunk streaming results.
-      try {
-        attemptResult = await _assessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
-        final recognizedText = attemptResult?.recognizedText ?? '';
-        if (mounted && recognizedText.isNotEmpty) {
-          setState(() {
-            _lastTranscript = recognizedText;
-          });
-        }
-      } catch (e, st) {
-        debugPrint('Error running final assess on buffered PCM: $e\n$st');
-      }
+
       // Create a raw PCM file on disk first.
       final pcmPath = await getAudioFilePath(ext: 'pcm');
       final pcmFile = File(pcmPath);
@@ -463,6 +477,35 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         debugPrint(
           'PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC',
         );
+      }
+
+
+
+      try {
+        _deepgramAssessor = DeepgramAssessor(audioPath: uploadPath!, practiceWord: practiceWord!);
+        attemptResult = await _deepgramAssessor!.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
+        final recognizedText = attemptResult?.recognizedText ?? '';
+        if (mounted && recognizedText.isNotEmpty) {
+          setState(() {
+            _lastTranscript = recognizedText;
+          });
+        }
+      } catch (e, st) {
+        if (e is SocketException) {
+          debugPrint("No internet connection, falling back to local STT, Cheetah");
+          try {
+            attemptResult = await _cheetahAssessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
+            final recognizedText = attemptResult?.recognizedText ?? '';
+            if (mounted && recognizedText.isNotEmpty) {
+              setState(() {
+                _lastTranscript = recognizedText;
+              });
+            }
+          } catch (e, st) {
+            debugPrint('Error running final assess on buffered PCM: $e\n$st');
+          }
+        }
+        debugPrint('Error running final assess on buffered PCM: $e\n$st');
       }
 
       // Store attempt record in Firestore

@@ -10,7 +10,6 @@ import 'package:readright/audio/stt/pronunciation_assessor.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:readright/audio/stt/on_device/cmu_map.dart';
 
-// import 'package:collection/collection.dart';
 
 
 /// On-device assessor for Cheetah (https://picovoice.ai/platform/cheetah/). 
@@ -144,37 +143,47 @@ class CheetahAssessor implements PronunciationAssessor {
     }
     jaroScore = bestScore;
 
-    List<String>? expectedPhonemes = cmuDict[normReference];
-    if (expectedPhonemes == null){
-      debugPrint("expectedPhonemes is NULL");
+    // Omit CMUDict assessment if the correct word was spoken
+    // CMUDict identifies the difference in phonetic pattern between different words
+    // Using the following algorithm on two of the same word is redundant
+    if (jaroScore == 1.0){
+      cmuScore = 1.0;
     }
     else {
-      bestScore = 0.0;
-      debugPrint("expectedPhonemes: $expectedPhonemes");
-      for (String word in words) {
-        List<String>? wordPhonemes = cmuDict[word];
-        if (wordPhonemes == null){
-          debugPrint("wordPhonemes is NULL for word: $word");
-        }
-        else {
-          debugPrint("comparing word, $word ($wordPhonemes) with $referenceText ($expectedPhonemes)");
-          cmuScore = comparePhonemes(expectedPhonemes, wordPhonemes);
-          debugPrint("CMUScore = $cmuScore");
-          if (cmuScore > bestScore) {
-            bestScore = cmuScore;
+      List<String>? expectedPhonemes = cmuDict[normReference];
+      if (expectedPhonemes == null){
+        debugPrint("expectedPhonemes is NULL");
+      }
+      else {
+        bestScore = 0.0;
+        debugPrint("expectedPhonemes: $expectedPhonemes");
+        for (String word in words) {
+          List<String>? wordPhonemes = cmuDict[word];
+          if (wordPhonemes == null){
+            debugPrint("wordPhonemes is NULL for word: $word");
+          }
+          else {
+            debugPrint("comparing word, $word ($wordPhonemes) with $referenceText ($expectedPhonemes)");
+            cmuScore = comparePhonemes(expectedPhonemes, wordPhonemes);
+            debugPrint("CMUScore = $cmuScore");
+            if (cmuScore > bestScore) {
+              bestScore = cmuScore;
+            }
           }
         }
+        cmuScore = bestScore;
+        debugPrint("final cmuScore: $cmuScore");
       }
-      cmuScore = bestScore;
-      debugPrint("final cmuScore: $cmuScore");
     }
 
-    // TODO: compute confidence and score
 
+    // TODO: compute confidence
+    // Weigh phonetic pattern higher
     double cmuWeight = 0.7;
     double jaroWeight = 0.3;
     score = (cmuScore * cmuWeight) + (jaroScore* jaroWeight);
     debugPrint("score before return: $score");
+
     // Generate a random score between 0.0 and 1.0 with two decimal places.
     // Make sure to update this calculate based on Levenshtein distance calculation.
     // score = double.parse((Random().nextInt(101) / 100).toStringAsFixed(2));
