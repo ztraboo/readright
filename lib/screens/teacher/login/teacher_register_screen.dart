@@ -125,6 +125,11 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
         if (userModel != null) {
               final teacherUid = userModel!.id;
 
+              // Count number of documents in the words collection
+              final wordsSnapshot =
+                  await FirebaseFirestore.instance.collection('words').get();
+              final totalWords = wordsSnapshot.docs.length;
+
               //Create an empty class document
               final classDocRef = await FirebaseFirestore.instance.collection('classes').add({
                 'classAverage': 0.00,
@@ -133,6 +138,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
                 'topStruggledWords': [],
                 'classId': '',
                 'classCode': '',
+                'totalWords':totalWords,
               });
 
               //Retrieve the generated document ID
