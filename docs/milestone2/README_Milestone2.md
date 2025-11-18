@@ -182,7 +182,90 @@ Currently we are referencing test data that we created from firebase/firestore. 
   - Recording progress indicator
 
 **student_word_practice_screen**
->This screen allows a student to practice pronouncing whichever word they chose from the student_word_dashboard_screen. A friendly illustration is included to make the screen feel friendly and engaging. The word is accompanied by an example sentence, and the student has the ability to record their attempt so it can then be graded. A recording progress indicator is given to notify the user that their attempt is in progress. *Note* this is a proof of concept and is not meant to be a dynamic, final product. 
+>This screen allows a student to practice pronouncing whichever word they chose from the student_word_dashboard_screen. A friendly illustration is included to make the screen feel friendly and engaging. The word is accompanied by an example sentence, and the student has the ability to record their attempt so it can then be graded. A recording progress indicator is given to notify the user that their attempt is in progress.
+>The student's response is then recorded and evaluated against the reference word being practiced. Local and cloud based model selection and assessment appearsa as follows:
+#### Update: Milestone 2: 
+### 🧮 Analysis Method Selection
+
+When selecting a method to analyze the heard transcript using a speech-to-text (STT) service, it was necessary to consider both the string similarity between the spoken transcript and the target reference text, as well as the phonetic pattern between these two variables.
+
+#### 🔤 String Similarity
+
+The Jaro-Winkler distance and Levenshtein distance were primarily considered:
+
+- **Levenshtein Distance** — counts the number of additions and deletions between two different strings.
+- **Jaro-Winkler Distance** — assigns a similarity score between two strings and handles transposed characters more gracefully. It also computes matched characters and transpositions more efficiently than full Levenshtein for short strings due to its localized matching logic.
+
+> Based on these characteristics, the Jaro-Winkler algorithm was selected for implementation.
+
+- [Jaro-Winkler Distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance)  
+- [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
+
+#### 🔊 Phonetic Pattern Comparison
+
+Phonemizer and CMUdict were evaluated:
+
+- **Phonemizer** — converts text into phonemes using rule-based, statistical, or neural model backends. It is multilingual and handles out-of-vocabulary items gracefully.
+- **CMUdict** — uses a manually curated pronunciation dictionary for American English. It provides fast lookups via Dart maps and predictable behavior.
+
+> Given that valid English words are expected from the STT provider, CMUdict was selected for implementation.
+
+- [Phonemizer](https://bootphon.github.io/phonemizer/)  
+- [CMUdict](https://en.wikipedia.org/wiki/CMU_Pronouncing_Dictionary)
+
+---
+
+### 🧠 Local Analysis Method Implementation
+
+This method computes a similarity score between a spoken transcript and a reference word.
+
+- Transcript is retrieved via **Deepgram API**, with **Cheetah** as fallback.
+- Transcript is normalized to lowercase and stripped of punctuation.
+- Each word in the transcript is scored against the target word.
+
+> Example: If the target is `"run"` and the transcript is `"do not run in the house"`, `"run"` is correctly identified.
+
+#### Scoring Flow
+
+1. **Jaro-Winkler** runs first and returns a score between 0 and 1.
+2. If no exact match is found, **CMUdict** converts each word to phonemes.
+3. A custom **Levenshtein** implementation compares phoneme lists.
+4. Scores are computed and returned via an `AssessmentResult` object.
+
+> This result is passed to the feedback screen where star ratings are adjusted accordingly.
+
+**Note:** The local method and assessment currently lack a mechanism to determine transcript or assessment confidence.
+
+---
+
+### ☁️ Cloud STT Model Selection
+
+Latency and accuracy were prioritized when selecting a cloud-based STT model. The following models were evaluated:
+
+- **Whisper (OpenAI)** — high accuracy under varied conditions, but latency issues on mobile devices.
+- **AssemblyAI** — low latency and rich metadata, but optimized for clean speech.
+- **Deepgram Nova-3** — best balance of latency and accuracy under varied conditions.
+
+> Deepgram was selected for its performance and modern architecture.
+
+#### Model Links
+
+- [Whisper (OpenAI)](https://openai.com/index/whisper/)  
+- [Google Cloud STT](https://cloud.google.com/speech-to-text?hl=en)  
+- [AssemblyAI](https://www.assemblyai.com/)  
+- [Microsoft Azure STT](https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account/search?icid=ai-services)  
+- [Speechace](https://www.speechace.com/)  
+- [Deepgram Nova-3](https://deepgram.com/learn/introducing-nova-3-speech-to-text-api)
+
+---
+
+### 🔁 Cloud STT Model Implementation
+
+Since Deepgram does not include its own comparison method, the local comparison operation is reused.
+
+> This approach can be expanded to support cloud-based models for directly comparing strings or audio files.
+
+**Note:** Confidence scores can be extracted from Deepgram’s API response, but currently do not influence scoring.
 
 ---
 
