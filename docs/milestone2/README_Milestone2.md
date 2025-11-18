@@ -89,7 +89,7 @@ Currently we are referencing test data that we created from firebase/firestore. 
 Added functionality to the following:
     -   **Search Students** - Type in this field to search for student
         - The teacher can type out a student's name and the list will filter based on the characters entered
-    -   **➕ Icon** -- Add/register a student to the dashboard
+    -   **➕ Icon** - Add/register a student to the dashboard
           - Here the teacher can add/register a student to the class
           - When this button is pressed, a pop-up dialog appears prompting the teacher to Add a student.
             - The Teacher will need to add the Student's Fullname, the email, and the username.
@@ -101,7 +101,7 @@ Added functionality to the following:
               - Return the teacher to the dashboard and update the student list to include the new added student
             - Pressing the Cancel button will return the teacher back to the teacher dashboard and NOT create a student
             
-    -   **Sort Icon** --- Sort student by name (A-Z, Z-A) or completetion status (High - Low, Low - High). The list will update when the selection is pressed.
+    - **Sort Icon** - Sort student by name (A-Z, Z-A) or completetion status (High - Low, Low - High). The list will update when the selection is pressed.
 
 ---
 
