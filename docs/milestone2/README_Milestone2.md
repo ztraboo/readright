@@ -47,35 +47,25 @@ Users identify as either **Teacher** or **Student**, determining which side of t
 
 > This is where the user will be able to create an account. Again this is temporary and will be replaced by a framework such as Firebase. The user will be prompted to enter a set of information to set up their account. When they are done, they press submit. Once submit is pressed the user account will be created (future functionality) and they will be redirected to the login screen. If the user is at this screen and they already have an account, they may select the Sign in option which will direct them to the Sign in page.
 
-
+### Update Milestone 2
+- **teacher_register_screen.dart** —
+When a teacher registers for an account creation, they are prompted to enter in their fullname, institution, username, email, and password. This milestone, the teacher account registration was enhanced to create a teacher and assign the teacher to a classroom in Firebase. Upon the creation of the classroom, the class progress is defaulted to empty/0 and there are no students associated to the class. The class code for the newly created class gets assigned from the first 6 characters of the firebase Class document code (class uid) . This is currently set to be the password for any students created in the teacher dashboard. 
 ---
 
-### 🧭 Teacher Dashboard (Deprecated)
+### 🧭 Teacher Dashboard
 
   Acts as the **home base** for teachers.
-  - View / add / delete classes  
-  - Access the **Class Dashboard** or **Word Dashboard**  
-  - Current data is static and for display only.
+  - Students Tab — list of enrolled students, search + filter, progress overview, click → details
+    -   Search Students - Type in this field to search for student
+    -   Person➕ Icon -- Add/register a student to the dashboard
+    -   Sort Icon --- Sort by name (A-Z, Z-A) or completetion status (High - Low, Low - High)
+  - Word Dashboard Button — link to the Word Dashboard
+  - Class Details --- Provides an overview of Class information/statistics
+  - Access the Student Details or Word Dashboard
 
 **teacher_dashboard_screen.dart**
 
 > The teacher dashboard is the “Home base” for the teacher app. Here they will be shown the Classes they currently have created. They will be able to add/delete their classes as well as click on each class to go to the Class Dashboard Page. If the user wants to add/modify/remove/view the words in the database for their account, they can select the Go to Word Dashboard button. This screen serves as a way to display or connect the teacher to everything under their account. *Note* Current Data is for display purposes only
-
-#### Update: Milestone 1
-This is being phased out due to time constraints and direction from the customer. Instead of managing multiple classes, the app will just focus on one class per teacher. We can bring this back in a future update if needed. The **Class Dashboard** will now be the primary landing page after the teacher logs in successfully.
-
----
-
-### 🏫 Class Dashboard
-
-Displays details about a specific class:
-  - **Students Tab** — list of enrolled students, search + filter, progress overview, click → details  
-  - **Words Tab** — view / select / filter words available to the class  
-  - **➕ Icon** — link to the Word Dashboard  
-  > *Note:* All data currently non-persistent.
-
-**class_dashboard_screen.dart**
->The Class Dashboard screen will provide further information about each class concerning the Students enrolled, and the words tied to that class. The Students tab shows a list of the enrolled students and the progress completed with the words tied to the class. This list can be filtered or searched to find the given student. Students can be added or removed from the list and student information can be accessed by clicking the student card. This will route the user to the Class Student Details screen. Under the Words tab, this shows a list of all of the words in the database in a card. The card contains a checkbox which allows the user to select which words they want the class to have access to. Like the Student list it can be filtered. If the user wants to edit the overall database of words, they can be redirected to the Word Dashboard using the + icon. *Note* Current Data is for display purposes only.
 
 #### Update: Milestone 1
 
@@ -93,6 +83,33 @@ This screen is used as the central hub for the teachers so that they may do the 
 
 Currently we are referencing test data that we created from firebase/firestore. This will be updated to match the data with whoever is logged in and their specific class/student information.
 
+
+### Update: Milestone 2
+
+Added functionality to the following:
+- Search Students: Type in this field to search for student
+  - The teacher can type out a student's name and the list will filter based on the characters entered
+-   ➕ Icon - Add/register a student to the dashboard
+  - Here the teacher can add/register a student to the class
+    - When this button is pressed, a pop-up dialog appears prompting the teacher to Add a student.
+    - The Teacher will need to add the Student's Fullname, the email, and the username.
+    - Pressing Create do the following:
+    - Create a new Student User
+    - Create a new Student profile where progress is stored. Items are set to empty/0 since this is a new profile
+    - The student is added the classroom
+    - The student password is set to the class code
+    - Return the teacher to the dashboard and update the student list to include the new added student
+    - Pressing the Cancel button will return the teacher back to the teacher dashboard and NOT create a student
+- Sort Icon - Sort student by name (A-Z, Z-A) or completetion status (High - Low, Low - High). The list will update when the selection is pressed.
+
+### 🏫 Class Dashboard  (Deprecated)
+
+
+**class_dashboard_screen.dart**
+>The Class Dashboard screen will provide further information about each class concerning the Students enrolled, and the words tied to that class. The Students tab shows a list of the enrolled students and the progress completed with the words tied to the class. This list can be filtered or searched to find the given student. Students can be added or removed from the list and student information can be accessed by clicking the student card. This will route the user to the Class Student Details screen. Under the Words tab, this shows a list of all of the words in the database in a card. The card contains a checkbox which allows the user to select which words they want the class to have access to. Like the Student list it can be filtered. If the user wants to edit the overall database of words, they can be redirected to the Word Dashboard using the + icon. *Note* Current Data is for display purposes only.
+>
+>#### Update: Milestone 1
+This is being phased out due to time constraints and direction from the customer. Instead of managing multiple classes, the app will just focus on one class per teacher. We can bring this back in a future update if needed. The **Teacher Dashboard** will now be the primary landing page after the teacher logs in successfully.
 
 ---
 
