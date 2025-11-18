@@ -8,10 +8,10 @@ import '../../utils/app_styles.dart';
 
 class StudentPasscodeVerificationPage extends StatefulWidget {
   final String? username;
-  final String? passcode;
+  // final String? passcode;
   final String? email;
 
-  const StudentPasscodeVerificationPage({super.key, this.username, this.passcode, this.email});
+  const StudentPasscodeVerificationPage({super.key, this.username, this.email});
 
   @override
   State<StudentPasscodeVerificationPage> createState() =>
@@ -26,7 +26,7 @@ class _StudentPasscodeVerificationPageState
   void initState() {
     super.initState();
 
-    debugPrint("StudentPasscodeVerificationPage: init with username ${widget.username}, passcode ${widget.passcode}");
+    debugPrint("StudentPasscodeVerificationPage: init with username ${widget.username}");
   }
 
   void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
@@ -69,25 +69,23 @@ class _StudentPasscodeVerificationPageState
       return;
     }
 
-    // Authenticate the user using Firebase Authentication (Email/Password).
-    // TODO: We'll need to implement a better way to create and verify the password field.
-    // For now, the password for all students is "Testing123!".
-    // try {
-    //   final userCredential = await UserRepository().signInFirebaseEmailPasswordUser(
-    //     email: widget.email!,
-    //     securePassword: 'Testing123!',
-    //   );
-    //   debugPrint('Signed in as ${userCredential?.username}');
-    // } catch (e) {
-    //   debugPrint('Failed to sign in as ${widget.username}: $e');
+    // Authenticate the user using Firebase Authentication (Email/Classcode).
+    try {
+      final userCredential = await UserRepository().signInFirebaseEmailPasswordUser(
+        email: widget.email!,
+        securePassword: _passcode,
+      );
+      debugPrint('Signed in as ${userCredential?.username}');
+    } catch (e) {
+      debugPrint('Failed to sign in as ${widget.username}: $e');
 
-    //   _showSnackBar(
-    //     message: 'Authentication failed. Please try again later.',
-    //     duration: const Duration(seconds: 2),
-    //     bgColor: AppColors.bgPrimaryRed,
-    //   );
-    //   return;
-    // } 
+      _showSnackBar(
+        message: 'Authentication failed. Please try again later.',
+        duration: const Duration(seconds: 2),
+        bgColor: AppColors.bgPrimaryRed,
+      );
+      return;
+    } 
 
     await Future.delayed(const Duration(seconds: 3));
 

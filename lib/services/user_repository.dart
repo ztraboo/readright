@@ -234,7 +234,7 @@ class UserRepository {
   }
 
   Future<bool> verifyClassPasscode(String passcode) async {
-    final query = await FirebaseFirestore.instance
+    final query = await _db
         .collection('classes')
         .where('classCode', isEqualTo: passcode)
         .limit(1)
