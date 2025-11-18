@@ -233,4 +233,14 @@ class UserRepository {
     await _auth.currentUser?.delete();
   }
 
+  Future<bool> verifyClassPasscode(String passcode) async {
+    final query = await FirebaseFirestore.instance
+        .collection('classes')
+        .where('classCode', isEqualTo: passcode)
+        .limit(1)
+        .get();
+
+    return query.docs.isNotEmpty;
+  }
+
 }

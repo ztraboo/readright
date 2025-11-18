@@ -51,7 +51,7 @@ class StudentRepository {
 
     // Add student to users
     await db.collection('users').doc(uid).set({
-      'uid': uid,
+      'id': uid,
       'email': email,
       'username': username,
       'fullName': fullName,
@@ -78,6 +78,9 @@ class StudentRepository {
       'topStruggled': [],
       'totalAttempts': 0,
     });
+    
+    // Sign out the student from the secondary auth instance
+    await FirebaseAuth.instanceFor(app: secondaryApp).signOut();
 
     // Remove the temporary Firebase app
     await secondaryApp.delete();

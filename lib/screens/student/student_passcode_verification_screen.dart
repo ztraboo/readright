@@ -58,7 +58,9 @@ class _StudentPasscodeVerificationPageState
     );
 
     // Check the passcode with Firebase to ensure it's valid.
-    if (widget.passcode == null || _passcode != widget.passcode) {
+    final isValid = await UserRepository().verifyClassPasscode(_passcode);
+
+    if (!isValid) {
       _showSnackBar(
         message: 'Invalid verification code. Please try again.',
         duration: const Duration(seconds: 2),
@@ -70,22 +72,22 @@ class _StudentPasscodeVerificationPageState
     // Authenticate the user using Firebase Authentication (Email/Password).
     // TODO: We'll need to implement a better way to create and verify the password field.
     // For now, the password for all students is "Testing123!".
-    try {
-      final userCredential = await UserRepository().signInFirebaseEmailPasswordUser(
-        email: widget.email!,
-        securePassword: 'Testing123!',
-      );
-      debugPrint('Signed in as ${userCredential?.username}');
-    } catch (e) {
-      debugPrint('Failed to sign in as ${widget.username}: $e');
+    // try {
+    //   final userCredential = await UserRepository().signInFirebaseEmailPasswordUser(
+    //     email: widget.email!,
+    //     securePassword: 'Testing123!',
+    //   );
+    //   debugPrint('Signed in as ${userCredential?.username}');
+    // } catch (e) {
+    //   debugPrint('Failed to sign in as ${widget.username}: $e');
 
-      _showSnackBar(
-        message: 'Authentication failed. Please try again later.',
-        duration: const Duration(seconds: 2),
-        bgColor: AppColors.bgPrimaryRed,
-      );
-      return;
-    } 
+    //   _showSnackBar(
+    //     message: 'Authentication failed. Please try again later.',
+    //     duration: const Duration(seconds: 2),
+    //     bgColor: AppColors.bgPrimaryRed,
+    //   );
+    //   return;
+    // } 
 
     await Future.delayed(const Duration(seconds: 3));
 

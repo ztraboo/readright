@@ -21,7 +21,7 @@ class ClassStudentDetails extends StatelessWidget {
     // Fetch fullName from users collection
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .where('uid', isEqualTo: studentUid)
+        .where('id', isEqualTo: studentUid)
         .limit(1)
         .get();
 

@@ -50,13 +50,13 @@ class TeacherDashboardPage extends StatelessWidget {
     // Get student names
     final userSnapshot = await FirebaseFirestore.instance
         .collection('users')
-        .where('uid', whereIn: studentUids)
+        .where('id', whereIn: studentUids)
         .get();
 
     // Creates a map from student UID to student name
     final uidToName = {
       for (var doc in userSnapshot.docs)
-        doc.data()['uid']: doc.data()['fullName'],
+        doc.data()['id']: doc.data()['fullName'],
     };
 
     // Combine student progress with names
