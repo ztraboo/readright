@@ -26,9 +26,6 @@ import 'screens/teacher/class/class_dashboard_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Ensure no user is signed in at app start
-  // await UserRepository().signOutCurrentUser();
-
   runApp(const MyApp());
 
   // Initialize Firebase asynchronously after the app has started to
@@ -40,6 +37,9 @@ Future<void> main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       debugPrint('Firebase initialized');
+
+      // Ensure no user is signed in at app start
+      // await UserRepository().signOutCurrentUser();
 
       // Manually upload seed words from asset on app start
       // We do this here to ensure it's done once when the app starts.
