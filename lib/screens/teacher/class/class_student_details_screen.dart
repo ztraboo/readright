@@ -18,15 +18,15 @@ class ClassStudentDetails extends StatelessWidget {
 
     final studentData = studentDoc.docs.first.data();
 
-    // Fetch displayName from users collection
+    // Fetch fullName from users collection
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .where('uid', isEqualTo: studentUid)
         .limit(1)
         .get();
 
-    final displayName = userDoc.docs.isNotEmpty
-        ? userDoc.docs.first.data()['displayName'] ?? 'No Name'
+    final fullName = userDoc.docs.isNotEmpty
+        ? userDoc.docs.first.data()['fullName'] ?? 'No Name'
         : 'No Name';
 
     // Fetch class info
@@ -39,7 +39,7 @@ class ClassStudentDetails extends StatelessWidget {
     final classData = classDoc.docs.isNotEmpty ? classDoc.docs.first.data() : {};
 
     return {
-      'displayName': displayName,
+      'fullName': fullName,
       'completed': studentData['completed'] ?? 0,
       'totalAttempts': studentData['totalAttempts'] ?? 0,
       'averageScore': studentData['averageScore'] ?? 0.0,
@@ -65,7 +65,7 @@ class ClassStudentDetails extends StatelessWidget {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           final data = snapshot.data ?? {};
-          final displayName = data['displayName'] ?? 'No Name';
+          final fullName = data['fullName'] ?? 'No Name';
           final completed = data['completed'] ?? 0;
           final totalWords = data['totalWords'] ?? 0;
           final averageScore = data['averageScore'] ?? 0.0;
@@ -79,7 +79,7 @@ class ClassStudentDetails extends StatelessWidget {
               children: [
                 // Student Name
                 Text(
-                  displayName,
+                  fullName,
                   style: const TextStyle(
                       fontSize: 22, fontWeight: FontWeight.bold),
                 ),
