@@ -126,7 +126,6 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
       (Route<dynamic> route) => false,
       arguments: {
         'username': username,
-        'passcode': userModelExists.id?.substring(0, 6),
         'email': userModelExists.email,
       },
     );

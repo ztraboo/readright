@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:readright/utils/firestore_utils.dart';
+// import 'package:readright/utils/firestore_utils.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
@@ -28,15 +28,6 @@ Future<void> main() async {
 
   // Ensure no user is signed in at app start
   // await UserRepository().signOutCurrentUser();
-
-
-  // Anonymous sign-in for development/testing
-  // try {
-  //   final userCredential = await FirebaseAuth.instance.signInAnonymously();
-  //   debugPrint('Signed in anonymously as ${userCredential.user?.uid}');
-  // } catch (e) {
-  //   debugPrint('Failed to sign in anonymously: $e');
-  // }
 
   runApp(const MyApp());
 
@@ -90,7 +81,6 @@ class MyApp extends StatelessWidget {
           final args = ModalRoute.of(context)?.settings.arguments;
           return StudentPasscodeVerificationPage(
             username: args is Map ? args['username'] : null,
-            passcode: args is Map ? args['passcode'] : null,
             email: args is Map ? args['email'] : null,
           );
         },
