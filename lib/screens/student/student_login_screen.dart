@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 
+import '../../models/current_user_model.dart';
 import '../../models/user_model.dart';
 import '../../services/user_repository.dart';
 import '../../utils/app_colors.dart';
@@ -27,19 +29,19 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
 
     // Check for existing user session on initialization
     // If a user is already signed in, we can skip the login screen
-    fetchUserModel().then((user) {
-        setState(() {
-          userModel = user;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        userModel = context.read<CurrentUserModel>().user;
 
-          if (userModel != null) {
-            // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
-            debugPrint('Restored user: ${userModel!.email}');
-            navigateToDashboard();
-          } else {
-            debugPrint('No persisted user found.');
-            isVerifyingExistingLoginSession = false;
-          }
-        });
+        if (userModel != null) {
+          // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
+          debugPrint('Restored user: ${userModel!.email}');
+          navigateToDashboard();
+        } else {
+          debugPrint('No persisted user found.');
+          isVerifyingExistingLoginSession = false;
+        }
+      });
     });
   }
 
@@ -47,10 +49,6 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
   void dispose() {
     usernameController.dispose();
     super.dispose();
-  }
-
-  Future<UserModel?> fetchUserModel() async {
-    return await UserRepository().fetchCurrentUser();
   }
 
   void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {

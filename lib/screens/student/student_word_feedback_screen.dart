@@ -3,18 +3,21 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+
 import '../../audio/stream/pcm_player.dart';
 import '../../audio/stt/pronunciation_assessor.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
-import '../../utils/app_colors.dart';
-import '../../utils/app_styles.dart';
 import 'package:readright/models/attempt_model.dart';
+import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
+import '../../utils/app_colors.dart';
+import '../../utils/app_styles.dart';
 import 'package:readright/utils/enums.dart';    
+
 
 class StudentWordFeedbackPage extends StatefulWidget {
 
@@ -68,24 +71,18 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
           });
         });
       }
+
+      setState(() {
+        _currentUser = context.read<CurrentUserModel>().user;
+
+        if (_currentUser != null) {
+          debugPrint('StudentWordFeedbackPage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}');
+        } else {
+          debugPrint('StudentWordFeedbackPage: No persisted user found.');
+        }
+      });
+
     }); 
-
-    UserRepository().fetchCurrentUser().then((user) {
-      _currentUser = user;
-
-      if (_currentUser == null) {
-        debugPrint(
-          'StudentWordFeedbackPage: No user is currently signed in.',
-        );
-      } else {
-        debugPrint(
-          'StudentWordFeedbackPage: User UID: ${_currentUser.id}, Username: ${_currentUser.username}, Email: ${_currentUser.email}, Role: ${_currentUser.role.name}',
-        );
-      }
-    })
-    .catchError((error) {
-      debugPrint('Error fetching current user: $error');
-    });
 
   } 
 

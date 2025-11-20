@@ -9,6 +9,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_core/firebase_core.dart';
@@ -21,6 +22,7 @@ import 'package:readright/audio/stt/on_device/cheetah_assessor.dart';
 import 'package:readright/audio/stt/pronunciation_assessor.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:readright/models/attempt_model.dart';
+import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 // import 'package:readright/models/user_model.dart';
@@ -109,6 +111,17 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         });
       }
       debugPrint('StudentWordPracticePage - Practice Word: $practiceWord, Word Level: ${wordLevel?.name}');
+
+      setState(() {
+        _currentUser = context.read<CurrentUserModel>().user;
+
+        if (_currentUser != null) {
+          debugPrint('StudentWordPracticePage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}');
+        } else {
+          debugPrint('StudentWordPracticePage: No persisted user found.');
+        }
+      });
+
     });
 
     if (practiceWord != null || practiceWord!.isEmpty) {
@@ -131,23 +144,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         _startSTTAccessor();
       }
     }
-
-    UserRepository().fetchCurrentUser().then((user) {
-      _currentUser = user;
-
-      if (_currentUser == null) {
-        debugPrint(
-          'StudentWordPracticePage: No user is currently signed in.',
-        );
-      } else {
-        debugPrint(
-          'StudentWordPracticePage: User UID: ${_currentUser.id}, Username: ${_currentUser.username}, Email: ${_currentUser.email}, Role: ${_currentUser.role.name}',
-        );
-      }
-    })
-    .catchError((error) {
-      debugPrint('Error fetching current user: $error');
-    });
 
     // Fetch a new sentence for the practice word.
     fetchNewWordSentence();
@@ -511,8 +507,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // Store attempt record in Firestore
       await storeAttempt(
         classId: 'cXEZyKGck7AHvcP6Abvn', // TODO: Replace with actual class ID 
-        userId: await UserRepository().fetchCurrentUser()
-            .then((user) => user?.id ?? 'unknown_user'),
+        userId: _currentUser?.id ?? 'unknown_user',
         wordId: practiceWord ?? 'word_placeholder',
         transcript: _lastTranscript ?? '',
         audioPath: fbStoragePath ?? '',

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 // import 'package:readright/utils/firestore_utils.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
@@ -20,26 +23,99 @@ import 'screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
 
-// import 'package:readright/services/user_repository.dart';
+import 'package:readright/models/current_user_model.dart';
+import 'package:readright/services/user_repository.dart';
 // import 'package:readright/utils/seed_words_uploader.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+/// Widget that performs asynchronous initialization (Firebase, Firestore
+/// settings) after the first frame has been drawn so app startup is
+/// non-blocking. Once Firebase is ready it will initialize repository
+/// notifiers that were provided at app start.
+class AppInitializer extends StatefulWidget {
+  final Widget child;
+  const AppInitializer({super.key, required this.child});
 
-  runApp(const MyApp());
+  @override
+  State<AppInitializer> createState() => _AppInitializerState();
+}
 
-  // Initialize Firebase asynchronously after the app has started to
-  // reduce blocking work on startup. This avoids waiting on native
-  // plugin initialization before the first frame is drawn.
-  Future<void>(() async {
+class _AppInitializerState extends State<AppInitializer> {
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Run init after the first frame to keep startup fast.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initOnce());
+  }
+
+  Future<void> _initOnce() async {
+    if (_initialized) return;
+    _initialized = true;
+
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      debugPrint('Firebase initialized');
+      debugPrint('Firebase initialized (post-start)');
 
-      // Ensure no user is signed in at app start
-      // await UserRepository().signOutCurrentUser();
+      // Enable persistence and set cache size; ignore on web where settings may differ.
+      try {
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+      } catch (e) {
+        debugPrint('Could not apply Firestore settings (platform may not support): $e');
+      }
+
+      // Initialize notifiers that were created before init
+      final firestore = FirebaseFirestore.instance;
+      final auth = FirebaseAuth.instance;
+
+      // Use mounted check to avoid calling context after dispose
+      if (!mounted) return;
+
+      // Initialize repositories with Firestore and Auth instances
+      try {
+        UserRepository(firestore: firestore, auth: auth);
+      } catch (e, st) {
+        debugPrint('Failed to initialize repository notifiers: $e\n$st');
+      }
+
+      // Listen to auth state changes so persistent FirebaseAuth sessions
+      // are handled and the corresponding Firestore user document is
+      // warmed/cached for the UI after app restart.
+      // FirebaseAuth persists the current user on mobile platforms by
+      // default; this listener ensures we fetch the associated user
+      // document when a session exists.
+      auth.authStateChanges().listen((firebaseUser) async {
+        if (firebaseUser == null) {
+          debugPrint('No signed-in user at authState change');
+          return;
+        }
+        try {
+          // Attempt to fetch the user's Firestore document so callers of
+          // fetchCurrentUser() or other user-based operations get a warm
+          // value and the repository cache (or notifier cache) can be
+          // populated.
+          final currentUser = await UserRepository().fetchUserByUserUID(firebaseUser.uid);
+          if (currentUser == null) {
+            debugPrint('No Firestore user document found for uid=${firebaseUser.uid}');
+            return;
+          }
+          // ignore: use_build_context_synchronously
+          context.read<CurrentUserModel>().logIn(currentUser);
+          debugPrint('User document fetched for uid=${firebaseUser.uid}');
+        } catch (e, st) {
+          debugPrint('Failed to fetch current user on auth state change: $e\n$st');
+        }
+
+        // Ensure no user is signed in at app start
+        // This is for testing purposes to avoid persisting sessions across app restarts.
+        // ignore: use_build_context_synchronously
+        // context.read<CurrentUserModel>().logOut();
+      });
 
       // Manually upload seed words from asset on app start
       // We do this here to ensure it's done once when the app starts.
@@ -59,11 +135,29 @@ Future<void> main() async {
     } catch (e, st) {
       debugPrint('Firebase initialization failed: $e\n$st');
     }
-  });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Keep app startup non-blocking: create notifiers immediately (they are lazy)
+  // and initialize Firebase & notifiers after the first frame inside AppInitializer.
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CurrentUserModel()),
+      ],
+      child: AppInitializer(child: const ReadRightApp()),
+    ),
+  );
+}
+
+class ReadRightApp extends StatelessWidget {
+  const ReadRightApp({super.key});
 
   @override
   Widget build(BuildContext context) {

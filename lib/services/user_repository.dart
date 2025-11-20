@@ -233,6 +233,7 @@ class UserRepository {
     await _auth.currentUser?.delete();
   }
 
+  // Verify if a class passcode exists in the 'classes' collection.
   Future<bool> verifyClassPasscode(String passcode) async {
     final query = await _db
         .collection('classes')
