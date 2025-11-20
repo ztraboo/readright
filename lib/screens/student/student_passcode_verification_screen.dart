@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
+import 'package:provider/provider.dart';
+import 'package:readright/models/current_user_model.dart';
 import 'package:readright/services/user_repository.dart';
 
 import '../../utils/app_colors.dart';
@@ -71,11 +73,10 @@ class _StudentPasscodeVerificationPageState
 
     // Authenticate the user using Firebase Authentication (Email/Classcode).
     try {
-      final userCredential = await UserRepository().signInFirebaseEmailPasswordUser(
+      await UserRepository().signInFirebaseEmailPasswordUser(
         email: widget.email!,
         securePassword: _passcode,
-      );
-      debugPrint('Signed in as ${userCredential?.username}');
+      ); 
     } catch (e) {
       debugPrint('Failed to sign in as ${widget.username}: $e');
 

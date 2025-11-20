@@ -1,16 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+
 import 'class/class_student_details_screen.dart';
+import '../../models/current_user_model.dart';
+import '../../models/user_model.dart';
 import '../../services/user_repository.dart';
 import '../../services/student_repository.dart';
 
-class TeacherDashboardPage extends StatelessWidget {
+class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
 
+  @override
+  State<TeacherDashboardPage> createState() => _TeacherDashboardPageState();
+}
+
+class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
+
+  UserModel? _currentUser;
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Check for existing user session on initialization
+    // If a user is already signed in, we can skip the login screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _currentUser = context.read<CurrentUserModel>().user;
+
+        if (_currentUser != null) {
+          debugPrint('TeacherDashboardPage: Found existing user session for ${_currentUser?.username}');
+        } else {
+          debugPrint('TeacherDashboardPage: No existing user session found.');
+        } 
+      });
+    });
+  }
+  
   // Get teacher uid asynchronously
   Future<String> get teacherUid async {
-    final user = await UserRepository().fetchCurrentUser();
-    return user?.id ?? '';
+    return _currentUser?.id ?? '';
   }
 
   // Get students in teacher's class.
@@ -381,9 +416,8 @@ class _StudentsTabState extends State<StudentsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Access the parent widget
-    final parent = context
-        .findAncestorWidgetOfExactType<TeacherDashboardPage>();
+    // Access the parent state to call methods defined on the State
+    final parentState = context.findAncestorStateOfType<_TeacherDashboardPageState>();
 
     return Column(
       children: [
@@ -458,9 +492,10 @@ class _StudentsTabState extends State<StudentsTab> {
         const SizedBox(height: 16),
 
         // Student List
+        // Student List
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: parent?.fetchStudents(),
+            future: parentState?.fetchStudents(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());

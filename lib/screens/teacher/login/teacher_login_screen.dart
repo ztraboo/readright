@@ -2,8 +2,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:readright/models/user_model.dart';
+import 'package:provider/provider.dart';
 
+import '../../../models/current_user_model.dart';
+import '../../../models/user_model.dart';
 import '../../../services/user_repository.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_styles.dart';
@@ -39,9 +41,9 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
 
     // Check for existing user session on initialization
     // If a user is already signed in, we can skip the login screen
-    fetchUserModel().then((user) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
-        userModel = user;
+        userModel = context.read<CurrentUserModel>().user;
 
         if (userModel != null) {
           // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
@@ -101,10 +103,6 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
 
     // Grab the latest password policy from Firebase Authentication via Cloud Functions
     fetchFirebaseAuthPasswordPolicy();
-  }
-
-  Future<UserModel?> fetchUserModel() async {
-    return await UserRepository().fetchCurrentUser();
   }
 
   void fetchFirebaseAuthPasswordPolicy() async {

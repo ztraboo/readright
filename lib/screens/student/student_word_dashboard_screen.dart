@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 
+import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/services/attempt_repository.dart';
-import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
@@ -28,16 +29,13 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
   void initState() {
     super.initState();
   
-    // Verify that the user is logged into Firebase by checking the currentUser status.
-    UserRepository().fetchCurrentUser().then((user) {
-      if (user == null) {
-        debugPrint('StudentWordDashboardPage: No user is currently signed in.');
-        // Optionally, navigate to the login screen.
-      } else {
-        debugPrint('StudentWordDashboardPage: User UID: ${user.id}, Username: ${user.username}, Email: ${user.email}, Role: ${user.role.name}');
-
+    // Check for existing user session on initialization
+    // If a user is already signed in, we can skip the login screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _currentUser = context.read<CurrentUserModel>().user;
+      if (_currentUser != null) {
         setState(() {
-          _currentUser = user;
+          debugPrint('StudentWordDashboardPage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}');
         
           // Fetch attempts for the current user from the database.
           AttemptRepository().fetchAttemptsByUser(
@@ -49,9 +47,10 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
           });
 
         });
+      } else {
+        debugPrint('StudentWordDashboardPage: No persisted user found.');
+        _userAttempts = [];
       }
-    }).catchError((error) {
-      debugPrint('Error fetching current user: $error');
     });
 
   }
