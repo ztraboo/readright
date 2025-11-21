@@ -38,6 +38,28 @@ class PcmPlayer {
       bufferSize: 2048,
     );
 
+    // Simple software gain: amplify 16-bit little-endian PCM samples in-place.
+    // 1.0 = no change, >1.0 = louder (clipped to int16 range).
+    const double gain = 6.0;
+    if (gain != 1.0) {
+      // Work on a copy so we don't modify the caller's buffer (avoids cumulative amplification).
+      final Uint8List amplified = Uint8List.fromList(pcm16leBytes);
+      for (int i = 0; i + 1 < amplified.length; i += 2) {
+      final int lo = amplified[i];
+      final int hi = amplified[i + 1];
+      int sample = (hi << 8) | lo;
+      if ((sample & 0x8000) != 0) sample = sample - 0x10000; // sign extend
+      int amplifiedSample = (sample * gain).round();
+      if (amplifiedSample > 0x7fff) amplifiedSample = 0x7fff;
+      if (amplifiedSample < -0x8000) amplifiedSample = -0x8000;
+      final int out = amplifiedSample & 0xffff;
+      amplified[i] = out & 0xff;
+      amplified[i + 1] = (out >> 8) & 0xff;
+      }
+      // Repoint the buffer used by the feed loop below to the amplified copy.
+      pcm16leBytes = amplified;
+    }
+
     // Feed the buffer in slices to avoid large synchronous writes
     const int chunkSize = 4096;
     int offset = 0;

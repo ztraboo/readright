@@ -50,6 +50,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   double _progress = 0.0;
   bool _isProcessingRecording = false;
   bool _isRecording = false;
+  bool _isIntroductionTtsPlaying = false;
   Timer? _recordTimer;
   int _msElapsed = 0; // milliseconds elapsed during recording
 
@@ -60,6 +61,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   String? displaySentence = '';
   WordLevel? wordLevel;
   bool online = false;
+
+  // ignore: constant_identifier_names
+  static const int TIMER_DURATION_MS = 3000;
 
   // determine if there is a valid internet connection
   Future<bool> hasInternetConnection() async {
@@ -389,10 +393,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       const tickMs = 100;
       _recordTimer = Timer.periodic(const Duration(milliseconds: tickMs), (t) {
         _msElapsed += tickMs;
-        final newProgress = (_msElapsed / 7000).clamp(0.0, 1.0);
+        final newProgress = (_msElapsed / TIMER_DURATION_MS).clamp(0.0, 1.0);
         setState(() => _progress = newProgress);
 
-        if (_msElapsed >= 7000) _stopRecording();
+        if (_msElapsed >= TIMER_DURATION_MS) _stopRecording();
       });
     } else {
       // stop early: stop the pcm recorder and then update UI
@@ -415,7 +419,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       _recordTimer?.cancel();
       _recordTimer = null;
 
-      _progress = (_msElapsed >= 7000) ? 1.0 : 0.0;
+      _progress = (_msElapsed >= TIMER_DURATION_MS) ? 1.0 : 0.0;
       _msElapsed = 0;
       _isRecording = false;
       _isProcessingRecording = true;
@@ -573,11 +577,18 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     // Pass the final uploaded path (wav if converted, otherwise original)
     if (!mounted) return;
 
+    // Reset the processing recording state after a short delay.
+    // This will allow the user to record again.
+    // await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      _isProcessingRecording = false;
+    });
+
     // Instead of passing a filesystem path, pass the in-memory PCM bytes
     // so the feedback screen can replay immediately from the recorder buffer.
     Navigator.of(
       context,
-    ).pushNamed(
+    ).pushReplacementNamed(
         '/student-word-feedback',
         arguments: {
           'pcmBytes': _pcmRecorder.getBufferedPcmBytes(),
@@ -585,13 +596,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           'practiceWord': practiceWord,
           'wordLevel': wordLevel,
         });
-
-    // Reset the processing recording state after a short delay.
-    // This will allow the user to record again.
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _isProcessingRecording = false;
-    });
   }
 
   Future<void> playRecording() async {
@@ -901,6 +905,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   }
 
   void _handleIntroductionTts() async {
+    setState(() {
+      _isIntroductionTtsPlaying = true;
+      debugPrint('Starting introduction TTS... $_isIntroductionTtsPlaying');
+    });
+    
     // Recite the header to the user on load.
     if (!_isRecording && !_isProcessingRecording) {
       Future.microtask(() async {
@@ -908,6 +917,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         await _handleLetsPronouceWordSentence();
         await _handleTtsWord('$practiceWord');
         await _handleTtsWordSentence('$practiceWord', practiceSentenceId!);
+
+        setState(() {
+          _isIntroductionTtsPlaying = false;
+          debugPrint('Ending introduction TTS... $_isIntroductionTtsPlaying');
+        });
+        
       });
     }
   }
@@ -1124,68 +1139,85 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   }
 
   Widget _buildRecordButton() {
-    final remaining = (_msElapsed >= 7000)
+    final remaining = (_msElapsed >= TIMER_DURATION_MS)
         ? 0
-        : ((7000 - _msElapsed + 999) ~/ 1000);
+        : ((TIMER_DURATION_MS - _msElapsed + 999) ~/ 1000);
 
-    return GestureDetector(
-      onTap: _isRecording ? _stopRecording : _handleRecord,
-      child: Container(
-        width: 160,
-        height: 48,
-        decoration: BoxDecoration(
-          color: _isRecording
-              ? AppColors.buttonSecondaryRed
-              : AppColors.bgPrimaryOrange,
-          borderRadius: BorderRadius.circular(1000),
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) =>
-                FadeTransition(opacity: anim, child: child),
-            child: _isProcessingRecording
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: Colors.white,
-                    ),
-                  )
-                : _isRecording
-                ? Row(
-                    key: const ValueKey('recording'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          value: _progress > 0 ? _progress : null,
-                          strokeWidth: 2.2,
-                          color: Colors.white,
+    debugPrint("_buildRecordButton: isIntroTtsPlaying=$_isIntroductionTtsPlaying, isRecording=$_isRecording, isProcessing=$_isProcessingRecording, progress=$_progress, remaining=$remaining");
+    return 
+      (_isIntroductionTtsPlaying == true)
+        ? Container(
+            width: 160,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.bgPrimaryGray,
+              borderRadius: BorderRadius.circular(1000),
+            ),
+            child: Center(
+              child: Text(
+                'RECORD',
+                style: AppStyles.buttonText,
+              ),
+            ),
+          )
+        : GestureDetector(
+            onTap: _isRecording ? _stopRecording : _handleRecord,
+            child: Container(
+              width: 160,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _isRecording
+                    ? AppColors.buttonSecondaryRed
+                    : AppColors.bgPrimaryOrange,
+                borderRadius: BorderRadius.circular(1000),
+              ),
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: _isProcessingRecording
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : _isRecording
+                      ? Row(
+                          key: const ValueKey('recording'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                value: _progress > 0 ? _progress : null,
+                                strokeWidth: 2.2,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              remaining > 0 ? 'STOP • ${remaining}s' : 'STOP',
+                              style: AppStyles.buttonText,
+                            ),
+                          ],
+                        )
+                      : Container(
+                          key: const ValueKey('idle'),
+                          child: const Text(
+                            'RECORD',
+                            // use AppStyles.buttonText via DefaultTextStyle? apply directly
+                            style: AppStyles.buttonText,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        remaining > 0 ? 'STOP • ${remaining}s' : 'STOP',
-                        style: AppStyles.buttonText,
-                      ),
-                    ],
-                  )
-                : Container(
-                    key: const ValueKey('idle'),
-                    child: const Text(
-                      'RECORD',
-                      // use AppStyles.buttonText via DefaultTextStyle? apply directly
-                      style: AppStyles.buttonText,
-                    ),
-                  ),
-          ),
-        ),
-      ),
-    );
+                ),
+              ),
+            ),
+          );
   }
 
   // Widget _buildReplayButton() {

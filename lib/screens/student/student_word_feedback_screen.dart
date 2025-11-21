@@ -15,6 +15,7 @@ import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import '../../utils/app_colors.dart';
+import '../../utils/app_scoring.dart';
 import '../../utils/app_styles.dart';
 import 'package:readright/utils/enums.dart';    
 
@@ -34,7 +35,8 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   WordLevel? wordLevel;
   bool hasNextWord = true;
 
-  int _currentScore = 0;
+  double _currentScore = 0.0;
+  double _passingThresholdStars = 0.0;
   Uint8List? _pcmBytes;
   AssessmentResult? _attemptResult;
 
@@ -64,6 +66,13 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       // Normalize score based on attemptResult score value if available.
       // Only normalize if score is greater than zero.
       if (_attemptResult != null && _attemptResult!.score > 0) {
+        _normalizeSTTScoreToStars(rawScore: AppScoring.passingThreshold).then((normalized) {
+          setState(() {
+            debugPrint("StudentWordFeedbackPage: Passing threshold STT score of ${AppScoring.passingThreshold} is represented as ${normalized} stars.");
+            _passingThresholdStars = normalized;
+          });
+        });
+
         _normalizeSTTScoreToStars(rawScore: _attemptResult?.score as double).then((normalized) {
           setState(() {
             debugPrint("StudentWordFeedbackPage: Speech-To-Text (STT) score of ${_attemptResult?.score} is represented as ${normalized} stars.");
@@ -86,33 +95,44 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
 
   } 
 
-  // Normalize raw score to 0..5 integer stars based on rawScore input of 0..1 or 0..100 pecentage value.
-  // Returns integer in 0..5 range to represent star count.
-  Future<int> _normalizeSTTScoreToStars({double rawScore = 0.0}) async {
-    final rawScoreValue = rawScore;
-    // Normalize to a 0.0 - 1.0 percentage (handle values in 0..1 or 0..100)
-    double percent = 0.0;
-    if (rawScoreValue is num) {
-    percent = rawScoreValue.toDouble();
-    } else {
-    percent = double.tryParse(rawScoreValue?.toString() ?? '') ?? 0.0;
-    }
+  // Normalize raw score to 0..5 double stars (in 0.5 increments) based on rawScore input of 0..1 or 0..100 percentage value.
+  // Returns a double in 0.0..5.0 stepped by 0.5 to represent star count.
+  Future<double> _normalizeSTTScoreToStars({double rawScore = 0.0}) async {
+    double percent = rawScore;
+    // If provided as 0..100, convert to 0..1
     if (percent > 1.0) {
-    // assume value was 0..100, convert to 0..1
-    percent = percent / 100.0;
+      percent = percent / 100.0;
     }
-    // Map percentage to 0..5 stars, rounding to nearest integer.
-    int mapped = (percent * 5).round();
-    // Treat tiny non-zero scores as at least 1 star
-    if (percent > 0 && mapped == 0) mapped = 1;
-    mapped = max(0, min(5, mapped));
-    return mapped;
+    // Clamp to valid percentage range
+    percent = percent.clamp(0.0, 1.0);
+
+    // Map percentage to 0..5 scale
+    final double scaled = percent * 5.0;
+
+    // Round to nearest 0.5
+    double rounded = (scaled * 2.0).round() / 2.0;
+
+    // Treat tiny non-zero scores as at least 0.5
+    if (percent > 0.0 && rounded == 0.0) rounded = 0.5;
+
+    // Ensure within bounds
+    rounded = rounded.clamp(0.0, 5.0) as double;
+
+    return rounded;
   }
 
   void _handleRetry() {
-    Navigator.pop(  
+    // Navigator.pop(  
+    //   context,
+    // );
+    Navigator.of(
       context,
-    );
+    ).pushReplacementNamed(
+        '/student-word-practice',
+        arguments: {
+          'practiceWord': practiceWord,
+          'wordLevel': wordLevel,
+        });
   }
 
   final PcmPlayer _pcmPlayer = PcmPlayer();
@@ -200,16 +220,21 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               _buildTranscriptSection(),
               const SizedBox(height: 12),
               //_buildInstructions(),
-              _buildReplayButton(),
-              const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildRetryButton(),
+                  _buildReplayButton(),
                   const SizedBox(width: 20),
-                  _buildDashboardNextButton(),
+                  _buildRetryButton(),
                 ],
               ),
+              const SizedBox(height: 20),
+              (_currentScore >= _passingThresholdStars)
+                  ? Column(children: [
+                        _buildDashboardNextButton(),
+                      ],
+                    )
+                  : Container(),
             ],
           ),
         ),
@@ -267,7 +292,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     return SizedBox(
       width: 364,
       height: 371,
-      child: _currentScore <= 2 ? SvgPicture.asset(
+      child: _currentScore < _passingThresholdStars ? SvgPicture.asset(
         'assets/mascot/yeti_upset.svg',
         semanticsLabel: 'Yeti Upset',
         fit: BoxFit.contain,
@@ -280,19 +305,18 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   }
 
   String _scoreMessage() {
-    switch (_currentScore) {
-      case 1:
-        return 'Oh no — let\'s try again!';
-      case 2:
-        return 'Not bad, keep practicing!';
-      case 3:
-        return 'Good work!';
-      case 4:
-        return 'Great job!';
-      case 5:
-        return 'Excellent! Perfect pronunciation!';
-      default:
-        return 'Let us try again!';
+    if (_currentScore >= 0.0 && _currentScore < 2.0) {
+      return 'Oh no — let\'s try again!';
+    } else if (_currentScore >= 2.0 && _currentScore < 3.5) {
+      return 'Not bad, keep practicing!';
+    } else if (_currentScore >= 3.5 && _currentScore < 4.0) {
+      return 'Good work — you passed!';
+    } else if (_currentScore >= 4.0 && _currentScore < 5.0) {
+      return 'Great job!';
+    } else if (_currentScore >= 5.0) {
+      return 'Excellent! Perfect pronunciation!';
+    } else {
+      return 'Let us try again!';
     }
   }
 
@@ -347,17 +371,16 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   }
   
   Widget _buildStarRating() {
-    // Simple visual star rating; use the 'score' passed into this widget for filled stars.
     const int totalStars = 5;
 
-    // Map incoming score to a 0..totalStars range:
-    // - If score is between 0 and totalStars, treat it as a direct star count.
-    final int raw = _currentScore;
-    debugPrint("StudentWordFeedbackPage: building star rating for score $raw");
-    int filledCount = 0;
-    if (raw >= 0 && raw <= totalStars) {
-      filledCount = raw;
-    } 
+    // Ensure score is within 0..totalStars and round to nearest 0.5
+    final double bounded = _currentScore.clamp(0.0, totalStars.toDouble());
+    final double roundedScore = (bounded * 2.0).round() / 2.0;
+
+    final int fullStars = roundedScore.floor();
+    final bool hasHalf = (roundedScore - fullStars) == 0.5;
+
+    debugPrint("StudentWordFeedbackPage: building star rating for score $_currentScore -> rounded $roundedScore (full=$fullStars half=$hasHalf)");
 
     return Container(
       width: double.infinity,
@@ -365,17 +388,26 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List<Widget>.generate(totalStars, (index) {
+          String asset;
+          String semantics;
+          if (index < fullStars) {
+            asset = 'assets/icons/star-yellow-svgrepo-com.svg';
+            semantics = 'Star Yellow';
+          } else if (index == fullStars && hasHalf) {
+            asset = 'assets/icons/star-yellow-half-svgrepo-com.svg';
+            semantics = 'Star Yellow Half';
+          } else {
+            asset = 'assets/icons/star-gray-svgrepo-com.svg';
+            semantics = 'Star Gray';
+          }
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: SvgPicture.asset(
-              index < filledCount
-                  ? 'assets/icons/star-yellow-svgrepo-com.svg'
-                  : 'assets/icons/star-gray-svgrepo-com.svg',
+              asset,
               width: 60,
               height: 60,
-              semanticsLabel: index < filledCount
-                  ? 'Star Yellow'
-                  : 'Star Gray',
+              semanticsLabel: semantics,
             ),
           );
         }),
