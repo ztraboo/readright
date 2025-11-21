@@ -50,36 +50,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
 
           // Perform an additional check to ensure that this is not a
           // student user logged in. We only want teachers.
-          switch (userModel!.role) {
-            case UserRole.teacher:
-              debugPrint('Restored user: ${userModel!.email}');
-              navigateToDashboard();
-              break;
-            case UserRole.student:
-              debugPrint('This dashboard can only be accessed by teachers!');
-
-              _showSnackBar(
-                message: 'This dashboard can only be accessed by teachers!',
-                duration: const Duration(seconds: 2),
-                bgColor: AppColors.bgPrimaryRed,
-              );
-
-              Future.delayed(const Duration(seconds: 3)).then((_) {
-                if (!mounted) return;
-                setState(() {
-                  // Traverse back to the reader selection screen
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/reader-selection',
-                    (Route<dynamic> route) => false,
-                  );
-
-                   isVerifyingExistingLoginSession = false;
-                });
-              });
-              
-              break;
-          }
+          checkUserRoleAccess();
 
         } else {
           debugPrint('No persisted user found.');
@@ -103,6 +74,45 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
 
     // Grab the latest password policy from Firebase Authentication via Cloud Functions
     fetchFirebaseAuthPasswordPolicy();
+  }
+
+  void checkUserRoleAccess() {
+      // Perform an additional check to ensure that this is not a
+      // student user logged in. We only want teachers.
+      switch (userModel!.role) {
+        case UserRole.teacher:
+          debugPrint('Restored user: ${userModel!.email}');
+          navigateToDashboard();
+          break;
+        case UserRole.student:
+          debugPrint('This dashboard can only be accessed by teachers!');
+
+          _showSnackBar(
+            message: 'This dashboard can only be accessed by teachers!',
+            duration: const Duration(seconds: 2),
+            bgColor: AppColors.bgPrimaryRed,
+          );
+
+          Future.delayed(const Duration(seconds: 3)).then((_) {
+            if (!mounted) return;
+            setState(() {
+              // Traverse back to the reader selection screen
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/reader-selection',
+                (Route<dynamic> route) => false,
+              );
+
+                isVerifyingExistingLoginSession = false;
+            });
+          });
+          
+          break;
+      }
+
+      // Exit early to prevent navigating to the teacher dashboard
+      // Important for student role case above
+      return;
   }
 
   void fetchFirebaseAuthPasswordPolicy() async {
@@ -194,7 +204,13 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
       return;
     }
 
-    navigateToDashboard();
+    // Perform an additional check to ensure that this is not a
+    // student user logged in. We only want teachers.
+    // This navigates to the teacher dashboard or user selection screen.
+    if (userModel != null) {
+      debugPrint('User signed in: ${userModel!.email}');
+      checkUserRoleAccess();
+    }
   }
 
   @override
