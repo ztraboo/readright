@@ -61,6 +61,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   WordLevel? wordLevel;
   bool online = false;
 
+  // ignore: constant_identifier_names
+  static const int TIMER_DURATION_MS = 3000;
+
   // determine if there is a valid internet connection
   Future<bool> hasInternetConnection() async {
     try {
@@ -389,10 +392,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       const tickMs = 100;
       _recordTimer = Timer.periodic(const Duration(milliseconds: tickMs), (t) {
         _msElapsed += tickMs;
-        final newProgress = (_msElapsed / 7000).clamp(0.0, 1.0);
+        final newProgress = (_msElapsed / TIMER_DURATION_MS).clamp(0.0, 1.0);
         setState(() => _progress = newProgress);
 
-        if (_msElapsed >= 7000) _stopRecording();
+        if (_msElapsed >= TIMER_DURATION_MS) _stopRecording();
       });
     } else {
       // stop early: stop the pcm recorder and then update UI
@@ -415,7 +418,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       _recordTimer?.cancel();
       _recordTimer = null;
 
-      _progress = (_msElapsed >= 7000) ? 1.0 : 0.0;
+      _progress = (_msElapsed >= TIMER_DURATION_MS) ? 1.0 : 0.0;
       _msElapsed = 0;
       _isRecording = false;
       _isProcessingRecording = true;
@@ -1124,9 +1127,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   }
 
   Widget _buildRecordButton() {
-    final remaining = (_msElapsed >= 7000)
+    final remaining = (_msElapsed >= TIMER_DURATION_MS)
         ? 0
-        : ((7000 - _msElapsed + 999) ~/ 1000);
+        : ((TIMER_DURATION_MS - _msElapsed + 999) ~/ 1000);
 
     return GestureDetector(
       onTap: _isRecording ? _stopRecording : _handleRecord,
