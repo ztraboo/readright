@@ -49,8 +49,8 @@ jobs:
             --output test_results/results.xml
 
       - name: Publish Test Results
+        if: github.event_name != 'pull_request'
         uses: dorny/test-reporter@v1
-        if: always()
         with:
           name: Flutter Tests
           path: test_results/results.xml
