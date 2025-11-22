@@ -33,8 +33,20 @@ jobs:
       - name: Run tests
         run: |
           mkdir -p test_results
-          flutter test --machine > test_results/results.json || true
-          cat test_results/results.json
+          flutter test --machine > test_results/results.json
+
+      - name: Install junitreport globally
+        run: flutter pub global activate junitreport
+      
+      - name: Add pub global to PATH
+        run: echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+          
+      - name: Convert results to JUnit
+        run: |
+          flutter pub global run junitreport:tojunit \
+            --input test_results/results.json \
+            --output test_results/results.xml
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
