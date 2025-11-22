@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ '*' ]
 
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   test:
     name: Run tests
