@@ -139,6 +139,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
                 'classId': '',
                 'classCode': '',
                 'totalWords':totalWords,
+                'audioRetention':true,
               });
 
               //Retrieve the generated document ID

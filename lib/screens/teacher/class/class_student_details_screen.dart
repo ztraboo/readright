@@ -123,15 +123,6 @@ class ClassStudentDetails extends StatelessWidget {
                       topStruggledWords.map<Widget>((w) => Text('• $w')).toList(),
                 ),
                 const Divider(height: 32, thickness: 1),
-
-                // Audio Retention Checkbox
-                Row(
-                  children: const [
-                    Checkbox(value: false, onChanged: null),
-                    SizedBox(width: 8),
-                    Text('Enable Audio Retention'),
-                  ],
-                ),
               ],
             ),
           );

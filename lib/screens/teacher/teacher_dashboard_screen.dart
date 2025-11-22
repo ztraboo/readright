@@ -16,8 +16,11 @@ class TeacherDashboardPage extends StatefulWidget {
 }
 
 class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
-
   UserModel? _currentUser;
+
+  // Audio retention state (loaded once)
+  bool _audioRetention = false;
+  bool _audioRetentionLoaded = false;
 
   @override
   void dispose() {
@@ -38,11 +41,11 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
           debugPrint('TeacherDashboardPage: Found existing user session for ${_currentUser?.username}');
         } else {
           debugPrint('TeacherDashboardPage: No existing user session found.');
-        } 
+        }
       });
     });
   }
-  
+
   // Get teacher uid asynchronously
   Future<String> get teacherUid async {
     return _currentUser?.id ?? '';
@@ -90,7 +93,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
 
     // Creates a map from student UID to student name
     final uidToName = {
-      for (var doc in userSnapshot.docs)
+      for (var doc in userSnapshot.docs) 
         doc.data()['id']: doc.data()['fullName'],
     };
 
@@ -126,6 +129,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
       'classCode': data['classCode'] ?? '',
       'totalWords': data['totalWords'] ?? 0,
       'teacherId': data['teacherId'] ?? '',
+      'audioRetention': data['audioRetention'] ?? false,
     };
   }
 
@@ -200,6 +204,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         classId: classId,
                         classCode: classCode,
                         teacherUid: classData['teacherId'] ?? '',
+                        studentsFuture: fetchStudents(),
                       );
                     },
                   );
@@ -221,6 +226,12 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                   }
 
                   final classData = snapshot.data ?? {};
+
+                  // Load audioRetention
+                  if (!_audioRetentionLoaded) {
+                    _audioRetention = classData['audioRetention'] ?? false;
+                    _audioRetentionLoaded = true;
+                  }
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,6 +291,33 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                             .map<Widget>((w) => Text('• $w'))
                             .toList(),
                       ),
+                      const SizedBox(height: 8),
+
+                      // Audio Retention Checkbox
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _audioRetention,
+                            onChanged: (value) async {
+                              if (value == null) return;
+
+                              setState(() {
+                                _audioRetention = value;
+                              });
+
+                              final classId = await fetchClassId();
+                              if (classId == null) return;
+
+                              await FirebaseFirestore.instance
+                                  .collection('classes')
+                                  .doc(classId)
+                                  .update({'audioRetention': value});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Enable Audio Retention'),
+                        ],
+                      ),
                     ],
                   );
                 },
@@ -307,12 +345,14 @@ class StudentsTab extends StatefulWidget {
   final String classId;
   final String classCode;
   final String teacherUid;
+  final Future<List<Map<String, dynamic>>>? studentsFuture;
 
   const StudentsTab({
     super.key,
     required this.classId,
     required this.classCode,
     required this.teacherUid,
+    this.studentsFuture,
   });
 
   @override
@@ -416,8 +456,8 @@ class _StudentsTabState extends State<StudentsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Access the parent state to call methods defined on the State
-    final parentState = context.findAncestorStateOfType<_TeacherDashboardPageState>();
+    // Use the future passed from parent
+    final studentsFuture = widget.studentsFuture;
 
     return Column(
       children: [
@@ -492,10 +532,9 @@ class _StudentsTabState extends State<StudentsTab> {
         const SizedBox(height: 16),
 
         // Student List
-        // Student List
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: parentState?.fetchStudents(),
+            future: studentsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -510,8 +549,8 @@ class _StudentsTabState extends State<StudentsTab> {
               final filteredStudents = students
                   .where(
                     (s) => (s['fullName'] as String).toLowerCase().contains(
-                      searchText,
-                    ),
+                          searchText,
+                        ),
                   )
                   .toList();
 
@@ -519,9 +558,9 @@ class _StudentsTabState extends State<StudentsTab> {
               filteredStudents.sort((a, b) {
                 int result;
                 if (sortBy == 'name') {
-                  result = (a['fullName'] as String).toLowerCase().compareTo(
-                    (b['fullName'] as String).toLowerCase(),
-                  );
+                  result = (a['fullName'] as String)
+                      .toLowerCase()
+                      .compareTo((b['fullName'] as String).toLowerCase());
                 } else {
                   final aPct = (a['totalWords'] == 0)
                       ? 0
@@ -557,7 +596,8 @@ class _StudentsTabState extends State<StudentsTab> {
                           Text('Words completed: $completed/$totalWords'),
                           const SizedBox(height: 4),
                           LinearProgressIndicator(
-                            value: totalWords == 0 ? 0 : completed / totalWords,
+                            value:
+                                totalWords == 0 ? 0 : completed / totalWords,
                             minHeight: 8,
                             backgroundColor: Colors.grey[300],
                             color: Colors.green,
