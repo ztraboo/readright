@@ -112,7 +112,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
         'uid': uid,
         'fullName': uidToName[uid] ?? 'No Name',
         'completed': data['completed'] ?? 0,
-        'totalWords': _classSection?.totalWordsToComplete ?? 0,
+        'totalWordsToComplete': _classSection?.totalWordsToComplete ?? 0,
       };
     }).toList();
   }
@@ -134,7 +134,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
       'classAverage': data['classAverage'] ?? 0.0,
       'topStruggledWords': List<String>.from(data['topStruggledWords'] ?? []),
       'classCode': data['classCode'] ?? '',
-      'totalWords': data['totalWords'] ?? 0,
+      'totalWordsToComplete': data['totalWordsToComplete'] ?? 0,
       'teacherId': data['teacherId'] ?? '',
       'audioRetention': data['audioRetention'] ?? false,
     };
@@ -627,12 +627,12 @@ class _StudentsTabState extends State<StudentsTab> {
                     (b['fullName'] as String).toLowerCase(),
                   );
                 } else {
-                  final aPct = (a['totalWords'] == 0)
+                  final aPct = (a['totalWordsToComplete'] == 0)
                       ? 0
-                      : (a['completed'] / a['totalWords']);
-                  final bPct = (b['totalWords'] == 0)
+                      : (a['completed'] / a['totalWordsToComplete']);
+                  final bPct = (b['totalWordsToComplete'] == 0)
                       ? 0
-                      : (b['completed'] / b['totalWords']);
+                      : (b['completed'] / b['totalWordsToComplete']);
                   result = aPct.compareTo(bPct);
                 }
                 return ascending ? result : -result;
@@ -648,7 +648,7 @@ class _StudentsTabState extends State<StudentsTab> {
                 itemBuilder: (context, index) {
                   final student = filteredStudents[index];
                   final completed = student['completed'] ?? 0;
-                  final totalWords = student['totalWords'] ?? 0;
+                  final totalWordsToComplete = student['totalWordsToComplete'] ?? 0;
 
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 8),
@@ -658,10 +658,10 @@ class _StudentsTabState extends State<StudentsTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 4),
-                          Text('Words completed: $completed/$totalWords'),
+                          Text('Words completed: $completed/$totalWordsToComplete'),
                           const SizedBox(height: 4),
                           LinearProgressIndicator(
-                            value: totalWords == 0 ? 0 : completed / totalWords,
+                            value: totalWordsToComplete == 0 ? 0 : completed / totalWordsToComplete,
                             minHeight: 8,
                             backgroundColor: Colors.grey[300],
                             color: Colors.green,

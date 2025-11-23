@@ -17,7 +17,6 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
   final List<Color> levelColors = const [
     Colors.blue,
     Colors.green,
-    Colors.yellow,
     Colors.orange,
     Colors.red,
     Colors.purple,

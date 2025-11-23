@@ -17,7 +17,7 @@ Future<void> exportStudentProgress({required String teacherUid}) async {
   if (classSnapshot.docs.isEmpty) return;
 
   final classData = classSnapshot.docs.first.data();
-  final studentUids = List<String>.from(classData['students'] ?? []);
+  final studentUids = List<String>.from(classData['studentIds'] ?? []);
 
   if (studentUids.isEmpty) return;
 

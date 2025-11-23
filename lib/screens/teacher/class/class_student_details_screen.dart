@@ -32,7 +32,7 @@ class ClassStudentDetails extends StatelessWidget {
     // Fetch class info
     final classDoc = await FirebaseFirestore.instance
         .collection('classes')
-        .where('students', arrayContains: studentUid)
+        .where('studentIds', arrayContains: studentUid)
         .limit(1)
         .get();
 
@@ -46,7 +46,7 @@ class ClassStudentDetails extends StatelessWidget {
       'totalAttempts': studentData['totalAttempts'] ?? 0,
       'averageScore': studentData['averageScore'] ?? 0.0,
       'topStruggledWords': List<String>.from(studentData['topStruggled'] ?? []),
-      'totalWords': classData['totalWords'] ?? 0,
+      'totalWordsToComplete': classData['totalWordsToComplete'] ?? 0,
     };
   }
 
@@ -66,7 +66,7 @@ class ClassStudentDetails extends StatelessWidget {
           final data = snapshot.data ?? {};
           final fullName = data['fullName'] ?? 'No Name';
           final completed = data['completed'] ?? 0;
-          final totalWords = data['totalWords'] ?? 0;
+          final totalWordsToComplete = data['totalWordsToComplete'] ?? 0;
           final averageScore = data['averageScore'] ?? 0.0;
           final totalAttempts = data['totalAttempts'] ?? 0;
           final topStruggledWords = data['topStruggledWords'] ?? [];
@@ -87,10 +87,10 @@ class ClassStudentDetails extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Progress Section
-                Text('Words completed: $completed / $totalWords'),
+                Text('Words completed: $completed / $totalWordsToComplete'),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(
-                  value: totalWords == 0 ? 0 : completed / totalWords,
+                  value: totalWordsToComplete == 0 ? 0 : completed / totalWordsToComplete,
                   minHeight: 8,
                   backgroundColor: Colors.grey[300],
                   color: Colors.green,
