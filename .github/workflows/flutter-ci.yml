@@ -1,0 +1,93 @@
+name: Flutter CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ '*' ]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+
+      - name: Cache pub and gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+          key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: Install deps
+        run: flutter pub get
+
+      - name: Run tests
+        run: |
+          mkdir -p test_results
+          flutter test --machine > test_results/results.json
+
+      - name: Install junitreport globally
+        run: flutter pub global activate junitreport
+      
+      - name: Add pub global to PATH
+        run: echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+          
+      - name: Convert results to JUnit
+        run: |
+          flutter pub global run junitreport:tojunit \
+            --input test_results/results.json \
+            --output test_results/results.xml
+
+      - name: Publish Test Results
+        if: github.event_name != 'pull_request'
+        uses: dorny/test-reporter@v1
+        with:
+          name: Flutter Tests
+          path: test_results/results.xml
+          reporter: java-junit
+
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test_results
+
+  build-and-store:
+    name: Build and store artifact
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+
+      - name: Install deps
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --debug
+
+      - name: Upload built artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk

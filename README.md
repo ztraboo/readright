@@ -10,7 +10,6 @@ Additional documentation and features will be added in separate pages:
 - [README (Milestone 3)](./docs/milestone3/README_Milestone3.md) - Audio Retention + Analytics + Hardening
 - [README (Final Delivery)](./docs/milestone4/README_FinalDelivery.md) - Release 1.0 + Polish & Documentation
 
-
 ## Getting Started
 
 This project is a starting point for a Flutter application.
