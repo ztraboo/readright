@@ -195,7 +195,7 @@ class ReadRightApp extends StatelessWidget {
         '/teacher-register': (context) => const TeacherRegisterPage(),
         '/teacher-password-reset': (context) => const TeacherPasswordResetPage(),
         '/teacher-dashboard': (context) => const TeacherDashboardPage(),
-        '/teacher-word-dashboard': (context) => const TeacherWordDashboardPage(),
+        '/teacher-word-dashboard': (context) =>  TeacherWordDashboardPage(),
         '/class-dashboard': (context) => const ClassDashboard(),
 //        '/class-student-details': (context) => const ClassStudentDetails(),
       },

@@ -36,15 +36,16 @@ class ClassStudentDetails extends StatelessWidget {
         .limit(1)
         .get();
 
-    final classData = classDoc.docs.isNotEmpty ? classDoc.docs.first.data() : {};
+    final classData = classDoc.docs.isNotEmpty
+        ? classDoc.docs.first.data()
+        : {};
 
     return {
       'fullName': fullName,
       'completed': studentData['completed'] ?? 0,
       'totalAttempts': studentData['totalAttempts'] ?? 0,
       'averageScore': studentData['averageScore'] ?? 0.0,
-      'topStruggledWords':
-          List<String>.from(studentData['topStruggled'] ?? []),
+      'topStruggledWords': List<String>.from(studentData['topStruggled'] ?? []),
       'totalWords': classData['totalWords'] ?? 0,
     };
   }
@@ -52,9 +53,7 @@ class ClassStudentDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Details'),
-      ),
+      appBar: AppBar(title: const Text('Student Details')),
       body: FutureBuilder<Map<String, dynamic>>(
         future: fetchStudentData(),
         builder: (context, snapshot) {
@@ -81,7 +80,9 @@ class ClassStudentDetails extends StatelessWidget {
                 Text(
                   fullName,
                   style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -97,30 +98,34 @@ class ClassStudentDetails extends StatelessWidget {
                 const Divider(height: 32, thickness: 1),
 
                 // Averages Section
-                const Text('Averages',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Averages',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Text('Average Score: $averageScore%'),
                 const Divider(height: 32, thickness: 1),
 
                 // Attempts Section
-                const Text('Attempts',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Attempts',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Text('Total Attempts: $totalAttempts'),
                 const Divider(height: 32, thickness: 1),
 
                 // Top Struggled Words
-                const Text('Top Struggled Words',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Top Struggled Words',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      topStruggledWords.map<Widget>((w) => Text('• $w')).toList(),
+                  children: topStruggledWords
+                      .map<Widget>((w) => Text('• $w'))
+                      .toList(),
                 ),
                 const Divider(height: 32, thickness: 1),
               ],

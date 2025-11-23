@@ -28,7 +28,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   late UserModel? userModel;
   bool isVerifyingExistingLoginSession = true;
 
-   @override
+  @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
@@ -51,7 +51,6 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
           // Perform an additional check to ensure that this is not a
           // student user logged in. We only want teachers.
           checkUserRoleAccess();
-
         } else {
           debugPrint('No persisted user found.');
 
@@ -68,7 +67,6 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
             });
           });
         }
-
       });
     });
 
@@ -77,42 +75,42 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   }
 
   void checkUserRoleAccess() {
-      // Perform an additional check to ensure that this is not a
-      // student user logged in. We only want teachers.
-      switch (userModel!.role) {
-        case UserRole.teacher:
-          debugPrint('Restored user: ${userModel!.email}');
-          navigateToDashboard();
-          break;
-        case UserRole.student:
-          debugPrint('This dashboard can only be accessed by teachers!');
+    // Perform an additional check to ensure that this is not a
+    // student user logged in. We only want teachers.
+    switch (userModel!.role) {
+      case UserRole.teacher:
+        debugPrint('Restored user: ${userModel!.email}');
+        navigateToDashboard();
+        break;
+      case UserRole.student:
+        debugPrint('This dashboard can only be accessed by teachers!');
 
-          _showSnackBar(
-            message: 'This dashboard can only be accessed by teachers!',
-            duration: const Duration(seconds: 2),
-            bgColor: AppColors.bgPrimaryRed,
-          );
+        _showSnackBar(
+          message: 'This dashboard can only be accessed by teachers!',
+          duration: const Duration(seconds: 2),
+          bgColor: AppColors.bgPrimaryRed,
+        );
 
-          Future.delayed(const Duration(seconds: 3)).then((_) {
-            if (!mounted) return;
-            setState(() {
-              // Traverse back to the reader selection screen
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/reader-selection',
-                (Route<dynamic> route) => false,
-              );
+        Future.delayed(const Duration(seconds: 3)).then((_) {
+          if (!mounted) return;
+          setState(() {
+            // Traverse back to the reader selection screen
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/reader-selection',
+              (Route<dynamic> route) => false,
+            );
 
-                isVerifyingExistingLoginSession = false;
-            });
+            isVerifyingExistingLoginSession = false;
           });
-          
-          break;
-      }
+        });
 
-      // Exit early to prevent navigating to the teacher dashboard
-      // Important for student role case above
-      return;
+        break;
+    }
+
+    // Exit early to prevent navigating to the teacher dashboard
+    // Important for student role case above
+    return;
   }
 
   void fetchFirebaseAuthPasswordPolicy() async {
@@ -122,7 +120,11 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     firebaseAuthPasswordPolicy = await fetchPasswordPolicy();
   }
 
-  void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
+  void _showSnackBar({
+    required String message,
+    required Duration duration,
+    Color? bgColor,
+  }) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -134,31 +136,31 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   }
 
   void navigateToDashboard() async {
-      if (userModel != null) {
-        debugPrint('User signed in successfully: ${userModel!.email}');
-        _showSnackBar(
-          message: (userModel!.fullName.trim().isNotEmpty == true)
+    if (userModel != null) {
+      debugPrint('User signed in successfully: ${userModel!.email}');
+      _showSnackBar(
+        message: (userModel!.fullName.trim().isNotEmpty == true)
             ? 'Sign in successful! Welcome back, ${userModel!.fullName}.'
             : 'Sign in successful!',
-          duration: const Duration(seconds: 2),
-          bgColor: AppColors.bgPrimaryDarkGrey,
-       );
+        duration: const Duration(seconds: 2),
+        bgColor: AppColors.bgPrimaryDarkGrey,
+      );
 
-        /**********************************************************
+      /**********************************************************
         Navigate to teacher dashboard after verifying login fields
 
         The fields must still be filled because of the null check,
         but any dummy values work for now
         **********************************************************/
-        await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) return;
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
 
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/teacher-dashboard',
-          (Route<dynamic> route) => false,
-        );
-    } 
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/teacher-dashboard',
+        (Route<dynamic> route) => false,
+      );
+    }
   }
 
   // Navigate to the teacher registration screen if the user taps "Sign Up"
@@ -171,7 +173,6 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
   }
 
   Future<void> _handleSignIn() async {
-
     // Validate the form (this triggers validators on TextFormField widgets)
     final valid = _formKey.currentState?.validate() ?? false;
     if (!valid) {
@@ -189,11 +190,13 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     try {
       userModel = await fireBaseAuth.signInFirebaseEmailPasswordUser(
         email: emailController.text,
-        securePassword: passwordController.text
+        securePassword: passwordController.text,
       );
     } on FirebaseException catch (e) {
       // Could not sign in, so we just need to show the error message.
-      debugPrint('Sign in failed for email: ${emailController.text}, error: ${e.toString()}');
+      debugPrint(
+        'Sign in failed for email: ${emailController.text}, error: ${e.toString()}',
+      );
       _showSnackBar(
         message: 'Sign in failed. Please check your email and password.',
         duration: const Duration(seconds: 3),
@@ -226,15 +229,15 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
         child: SingleChildScrollView(
           child: Center(
             child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 46),
-                  isVerifyingExistingLoginSession
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 46),
+                isVerifyingExistingLoginSession
                     ? _buildVerifyingLoginSession()
                     : _buildBody(),
-                ],
-              ),
+              ],
+            ),
           ),
         ),
       ),
@@ -296,17 +299,14 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text(
-          'Verifying Login,',
-          style: AppStyles.headerText,
-        ),
+        const Text('Verifying Login,', style: AppStyles.headerText),
         const SizedBox(height: 22),
         const Text(
           "Checking for existing user session ...",
           style: AppStyles.subheaderText,
         ),
         const SizedBox(height: 22),
-        CircularProgressIndicator()
+        CircularProgressIndicator(),
       ],
     );
   }
@@ -315,10 +315,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Welcome Back,',
-          style: AppStyles.headerText,
-        ),
+        const Text('Welcome Back,', style: AppStyles.headerText),
         const SizedBox(height: 22),
         const Text(
           "Let's get started helping kids learn how to read better.",
@@ -354,7 +351,7 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
           borderSide: BorderSide(color: AppColors.textPrimaryBlue, width: 5),
         ),
       ),
-      validator: (value) => Validator.validateEmail(value, ),
+      validator: (value) => Validator.validateEmail(value),
     );
   }
 
@@ -415,29 +412,20 @@ class _TeacherLoginPageState extends State<TeacherLoginPage> {
           borderRadius: BorderRadius.circular(1000),
         ),
         child: Center(
-          child: const Text(
-            'SIGN IN',
-            style: AppStyles.buttonText,
-          ),
+          child: const Text('SIGN IN', style: AppStyles.buttonText),
         ),
       ),
     );
   }
 
-    Widget _buildSignUpMessage() {
+  Widget _buildSignUpMessage() {
     return GestureDetector(
       onTap: _handleSignUp,
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Text(
-            "Don't have an account? ",
-            style: AppStyles.subheaderText,
-          ),
-          Text(
-            "Sign Up",
-            style: AppStyles.navigationText,
-          ),
+          Text("Don't have an account? ", style: AppStyles.subheaderText),
+          Text("Sign Up", style: AppStyles.navigationText),
         ],
       ),
     );
