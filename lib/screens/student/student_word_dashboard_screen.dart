@@ -5,6 +5,7 @@ import 'package:readright/models/class_model.dart';
 
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
+import 'package:readright/models/word_model.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
@@ -60,12 +61,13 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
 
   }
 
+  // Returns list of word IDs for the given word level.
   Future<List<String>> _fetchLevelWords(WordLevel wordLevel) async {
     try {
       debugPrint('Fetching words for level: ${wordLevel.name}');
       final words = await WordRepository().fetchLevelWords(wordLevel);
       debugPrint('Fetched ${words.length} words for level: ${wordLevel.name}');
-      return words.map((w) => w.text ?? '').toList();
+      return words.map((w) => w.id ?? '').toList();
     } catch (e) {
       debugPrint('Error fetching words for level ${wordLevel.name}: $e');
       return [];
@@ -76,13 +78,13 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     try {
       debugPrint('Fetching words for level: ${wordLevel.name}');
       final words = await WordRepository().fetchLevelWords(wordLevel);
-      final wordTexts = words.map((w) => w.text ?? '').toList();
-      if (wordTexts.isEmpty) return 0;
+      final wordIds = words.map((w) => w.id ?? '').toList();
+      if (wordIds.isEmpty) return 0;
 
       // Count words where the user has at least one attempt with score > 0.00
       if (_userAttempts.isEmpty) return 0;
       int completed = 0;
-      for (final word in wordTexts) {
+      for (final word in wordIds) {
         final hasSuccessfulAttempt = _userAttempts.any(
           (a) => a.wordId == word && (a.score ?? 0) > 0.00,
         );
@@ -95,29 +97,32 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     }
   }
 
-  Future<String> _fetchUsersPracticeWord(WordLevel wordLevel) async {
+  // Fetch the practice WordModel for the user in the given word level.
+  Future<WordModel?> _fetchUsersPracticeWord(WordLevel wordLevel) async {
     // Compute the practice word for the user to practice in the given word level.
     // This is a placeholder implementation; replace with actual logic.
     try {
       final words = await WordRepository().fetchLevelWords(wordLevel);
-      final wordTexts = words.map((w) => w.text ?? '').toList();
-      if (wordTexts.isEmpty) return '';
-      if (_userAttempts.isEmpty) return wordTexts.first;
+      final wordIds = words.map((w) => w.id ?? '').toList();
+      if (wordIds.isEmpty) return null;
+      if (_userAttempts.isEmpty) return await WordRepository().fetchWordById(wordIds.first);
 
       // Find the first word that the user has not yet attempted.
-      final practiceWord = wordTexts.firstWhere(
+      final practiceWordId = wordIds.firstWhere(
         (word) {
           final attemptsForWord = _userAttempts.where((a) => a.wordId == word);
           // Select the word if there are no attempts yet.
           return attemptsForWord.isEmpty;
         },
-        orElse: () => wordTexts.first,
+        orElse: () => wordIds.first,
       );
-      debugPrint('Selected practice word for level ${wordLevel.name}: $practiceWord');
+      final practiceWord = await WordRepository().fetchWordById(practiceWordId);
+
+      debugPrint('Selected practice word for level ${wordLevel.name}: ${practiceWord?.text}');
       return practiceWord;
     } catch (e) {
       debugPrint('Error fetching practice word for level ${wordLevel.name}: $e');
-      return '';
+      return null;
     }
   }
 

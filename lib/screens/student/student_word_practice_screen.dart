@@ -25,6 +25,7 @@ import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/class_model.dart';
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
+import 'package:readright/models/word_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/user_repository.dart';
@@ -58,7 +59,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   late final UserModel? _currentUser;
   late final ClassModel? _currentClassSection;
 
-  String? practiceWord = '';
+  WordModel? practiceWord;
   String? practiceSentenceId;
   int? practiceSentenceIndex;
   String? displaySentence = '';
@@ -108,16 +109,16 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
         setState(() {
-          practiceWord = args['practiceWord'] as String?;
+          practiceWord = args['practiceWord'] as WordModel?;
           wordLevel = args['wordLevel'] as WordLevel?;
         });
       } else if (args is Map) {
         setState(() {
-          practiceWord = args['practiceWord'] as String?;
+          practiceWord = args['practiceWord'] as WordModel?;
           wordLevel = args['wordLevel'] as WordLevel?;
         });
       }
-      debugPrint('StudentWordPracticePage - Practice Word: $practiceWord, Word Level: ${wordLevel?.name}');
+      debugPrint('StudentWordPracticePage - Practice Word: ${practiceWord?.text}, Word Level: ${wordLevel?.name}');
 
       setState(() {
         _currentUser = context.read<CurrentUserModel>().user;
@@ -133,7 +134,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     });
 
-    if (practiceWord != null || practiceWord!.isEmpty) {
+    if (practiceWord != null) {
       // Initialize the PCM player now. The recorder will manage microphone
       // permission and initialize itself on start().
       _initPCMPlayer();
@@ -180,7 +181,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   // Start recording for the STT assessor early.
   Future<void> _startSTTAccessor() async {
     // Initialize the assessor now that _pcmRecorder is available.
-    _cheetahAssessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!);
+    _cheetahAssessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!.text);
 
     await _cheetahAssessor.start();
   }
@@ -189,7 +190,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // Select a random sentence index for the practice word
       // Normalize to match filenames
       // Only pick a sentence index if we haven't already set one.
-      final word = practiceWord?.trim().toLowerCase();
+      final word = practiceWord?.text.trim().toLowerCase();
       final idx = (DateTime.now().millisecondsSinceEpoch % 3) + 1;
       debugPrint('Selected sentence index: $idx for word: $word');
       setState(() {
@@ -307,7 +308,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     final fileName = path.basename(filePath);
     final storageRef = FirebaseStorage.instance.ref().child(
-      'audio/${_currentUser?.username ?? 'unknown'}/$practiceWord/$fileName',
+      'audio/${_currentUser?.username ?? 'unknown'}/${practiceWord?.text ?? 'unknown'}/$fileName',
     );
 
     try {
@@ -342,7 +343,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   Future<String> getAudioFilePath({String ext = 'aac'}) async {
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '${dir.path}/${_currentUser?.username ?? 'unknown'}_${practiceWord}_$timestamp.$ext';
+    return '${dir.path}/${_currentUser?.username ?? 'unknown'}_${practiceWord?.text ?? 'unknown'}_$timestamp.$ext';
   }
 
   Future<void> _handleRecord() async {
@@ -487,8 +488,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
 
       try {
-        _deepgramAssessor = DeepgramAssessor(audioPath: uploadPath!, practiceWord: practiceWord!);
-        attemptResult = await _deepgramAssessor!.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
+        _deepgramAssessor = DeepgramAssessor(audioPath: uploadPath!, practiceWord: practiceWord!.text);
+        attemptResult = await _deepgramAssessor!.assess(referenceText: practiceWord!.text, audioBytes: pcmBytes, locale: 'en-US');
         final recognizedText = attemptResult?.recognizedText ?? '';
         if (mounted && recognizedText.isNotEmpty) {
           setState(() {
@@ -499,7 +500,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         if (e is SocketException) {
           debugPrint("No internet connection, falling back to local STT, Cheetah");
           try {
-            attemptResult = await _cheetahAssessor.assess(referenceText: practiceWord!, audioBytes: pcmBytes, locale: 'en-US');
+            attemptResult = await _cheetahAssessor.assess(referenceText: practiceWord!.text, audioBytes: pcmBytes, locale: 'en-US');
             final recognizedText = attemptResult?.recognizedText ?? '';
             if (mounted && recognizedText.isNotEmpty) {
               setState(() {
@@ -517,7 +518,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       await storeAttempt(
         classId: _currentClassSection?.id ?? 'Unknown',
         userId: _currentUser?.id ?? 'unknown_user',
-        wordId: practiceWord ?? 'word_placeholder',
+        wordId: practiceWord?.id ?? 'unknown_word_id',
         transcript: _lastTranscript ?? '',
         audioPath: fbStoragePath ?? '',
         durationMS: pcmBytes.length ~/ 32, // approximate duration
@@ -920,8 +921,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       Future.microtask(() async {
         // Ensure the prompt audio plays first, then the word audio.
         await _handleLetsPronouceWordSentence();
-        await _handleTtsWord('$practiceWord');
-        await _handleTtsWordSentence('$practiceWord', practiceSentenceId!);
+        await _handleTtsWord('${practiceWord?.text}');
+        await _handleTtsWordSentence('${practiceWord?.text}', practiceSentenceId!);
 
         setState(() {
           _isIntroductionTtsPlaying = false;
@@ -957,7 +958,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                 const SizedBox(width: 30),
                 SizedBox(
                   child: Text(
-                    '$practiceWord',
+                    '${practiceWord?.text}',
                     textAlign: TextAlign.center,
                     style: AppStyles.headerText,
                   ),
@@ -1059,7 +1060,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       ? CircularProgressIndicator()
       : FutureBuilder<dynamic>(
         future: WordRepository().fetchWordByTextAndLevel(
-          practiceWord!,
+          practiceWord?.text ?? '',
           wordLevel!,
         ),
         builder: (context, snapshot) {
@@ -1102,7 +1103,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                 const SizedBox(width: 4),
                 _buildHighLightedWordInSentence(
                   sentence: displaySentence ?? '',
-                  wordToHighlight: practiceWord!,
+                  wordToHighlight: practiceWord?.text ?? '',
                   textStyle: AppStyles.subheaderText,
                   highlightStyle: AppStyles.subheaderTextBold,
                 ),
@@ -1310,7 +1311,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       tooltip: 'Play Practice Word',
       onPressed: () {
         (!_isRecording && !_isProcessingRecording)
-          ? _handleTtsWord('$practiceWord')
+          ? _handleTtsWord('${practiceWord?.text}')
           : null;
       },
     );
@@ -1327,7 +1328,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       tooltip: 'Play Practice Word Sentence',
       onPressed: () {
         (!_isRecording && !_isProcessingRecording)
-            ? _handleTtsWordSentence('$practiceWord', '$practiceSentenceId')
+            ? _handleTtsWordSentence('${practiceWord?.text}', '$practiceSentenceId')
             : null;
       },
     );

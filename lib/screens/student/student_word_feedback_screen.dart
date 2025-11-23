@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:readright/models/word_model.dart';
 
 import '../../audio/stream/pcm_player.dart';
 import '../../audio/stt/pronunciation_assessor.dart';
@@ -12,6 +13,7 @@ import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/class_model.dart';
 import 'package:readright/models/user_model.dart';
+import 'package:readright/models/word_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/user_repository.dart';
@@ -35,7 +37,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   late final UserModel? _currentUser;
   late final ClassModel? _currentClassSection;
 
-  String? practiceWord = '';
+  WordModel? practiceWord;
   WordLevel? wordLevel;
   bool hasNextWord = true;
 
@@ -55,14 +57,14 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         setState(() {
           _attemptResult = args['attemptResult'] as AssessmentResult?;
           _pcmBytes = args['pcmBytes'] as Uint8List?;
-          practiceWord = args['practiceWord'] as String?;
+          practiceWord = args['practiceWord'] as WordModel?;
           wordLevel = args['wordLevel'] as WordLevel?;
         });
       } else if (args is Map) {
         setState(() {
           _attemptResult = args['attemptResult'];
           _pcmBytes = args['pcmBytes'] as Uint8List?;
-          practiceWord = args['practiceWord'] as String?;
+          practiceWord = args['practiceWord'] as WordModel?;
           wordLevel = args['wordLevel'] as WordLevel?;
         });
       }
@@ -150,7 +152,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         return;
       }
     } catch (e, st) {
-      debugPrint('Error playing PCM via PcmPlayer: $e\n$st');
+      debugPrint('StudentWordFeedbackPage: Error playing PCM via PcmPlayer: $e\n$st');
     }
   }
 
@@ -168,7 +170,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
-  Future<String?> _fetchUsersNextWord(WordLevel wordLevel) async {
+  Future<WordModel?> _fetchUsersNextWord(WordLevel wordLevel) async {
     // Compute the next word for the user to practice in the given word level.
     // This implementation awaits the user's attempts so the local variable is initialized
     // before being used, and avoids unnecessary null-coalescing on word text.
@@ -179,29 +181,31 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         _currentUser?.id ?? '',
         classId: _currentClassSection?.id ?? 'Unknown',
       );
-      debugPrint('Fetched ${userAttempts.length} attempts for user ${_currentUser?.id}');
+      debugPrint('StudentWordFeedbackPage: Fetched ${userAttempts.length} attempts for user ${_currentUser?.id}');
 
       final words = await WordRepository().fetchLevelWords(wordLevel);
       // Map to word text; use whereType to filter out any nulls if text is nullable.
-      final wordTexts = words.map((w) => w.text).whereType<String>().toList();
+      final wordIds = words.map((w) => w.id).whereType<String>().toList();
 
-      if (wordTexts.isEmpty) return '';
-      if (userAttempts.isEmpty) return wordTexts.first;
+      if (wordIds.isEmpty) return null;
+      if (userAttempts.isEmpty) return await WordRepository().fetchWordById(wordIds.first);
 
       // Find the first word that the user has not yet attempted.
-      final practiceWord = wordTexts.firstWhere(
+      final practiceWordId = wordIds.firstWhere(
         (word) {
           final attemptsForWord = userAttempts.where((a) => a.wordId == word);
           // Select the word if there are no attempts yet.
           return attemptsForWord.isEmpty;
         },
-        orElse: () => wordTexts.first,
+        orElse: () => wordIds.first,
       );
-      debugPrint('Selected next word for level ${wordLevel.name}: $practiceWord');
+      final practiceWord = await WordRepository().fetchWordById(practiceWordId);
+
+      debugPrint('StudentWordFeedbackPage: Selected next word for level ${wordLevel.name}: ${practiceWord?.text}');
       return practiceWord;
     } catch (e) {
-      debugPrint('Error fetching next word for level ${wordLevel.name}: $e');
-      return '';
+      debugPrint('StudentWordFeedbackPage: Error fetching next word for level ${wordLevel.name}: $e');
+      return null;
     }
   }
 
@@ -276,7 +280,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
             SizedBox(
               width: 349,
               child: Text(
-                practiceWord ?? '',
+                practiceWord?.text ?? '',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'SF Pro Display',
@@ -513,8 +517,8 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         // TODO: Need to put this in the init() method and store 
         // state rather than calling it here potentially on a tap.
         (_fetchUsersNextWord(wordLevel as WordLevel)).then((word) {
-          debugPrint('Next word for user ${_currentUser?.id} at level ${wordLevel?.name} is: $word');
-          if (word != null && word.isNotEmpty) {
+          debugPrint('StudentWordFeedbackPage: Next word for user ${_currentUser?.id} at level ${wordLevel?.name} is: ${word?.text}');
+          if (word != null) {
             Navigator.pushNamed(
               context,
               '/student-word-practice',
