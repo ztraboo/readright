@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:readright/models/class_model.dart';
 
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/services/attempt_repository.dart';
+import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
@@ -22,6 +24,7 @@ class StudentWordDashboardPage extends StatefulWidget {
 class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> { 
 
   late final UserModel? _currentUser;
+  late final ClassModel? _currentClassSection;
   late final List<AttemptModel> _userAttempts;
   late final String practiceWord;
 
@@ -34,13 +37,15 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _currentUser = context.read<CurrentUserModel>().user;
       if (_currentUser != null) {
+        _currentClassSection = context.read<CurrentUserModel>().classSection;
+
         setState(() {
           debugPrint('StudentWordDashboardPage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}');
         
           // Fetch attempts for the current user from the database.
           AttemptRepository().fetchAttemptsByUser(
             _currentUser?.id ?? '',
-            classId: 'cXEZyKGck7AHvcP6Abvn'
+            classId: _currentClassSection?.id ?? 'Unknown',
           ).then((attempts) {
               _userAttempts = attempts;
               debugPrint('Fetched ${_userAttempts.length} attempts for user ${_currentUser?.id}');

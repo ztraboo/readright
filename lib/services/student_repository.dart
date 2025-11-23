@@ -65,7 +65,7 @@ class StudentRepository {
 
     // Add student to class
     await db.collection('classes').doc(classId).update({
-      'students': FieldValue.arrayUnion([uid]),
+      'studentIds': FieldValue.arrayUnion([uid]),
     });
 
     // Create the student details

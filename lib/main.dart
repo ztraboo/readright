@@ -4,6 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:readright/models/current_user_model.dart';
+import 'package:readright/services/attempt_repository.dart';
+import 'package:readright/services/class_repository.dart';
+import 'package:readright/services/user_repository.dart';
+import 'package:readright/services/word_respository.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
@@ -23,8 +28,6 @@ import 'screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
 
-import 'package:readright/models/current_user_model.dart';
-import 'package:readright/services/user_repository.dart';
 // import 'package:readright/utils/seed_words_uploader.dart';
 
 /// Widget that performs asynchronous initialization (Firebase, Firestore
@@ -78,7 +81,10 @@ class _AppInitializerState extends State<AppInitializer> {
 
       // Initialize repositories with Firestore and Auth instances
       try {
+        AttemptRepository(firestore: firestore, auth: auth);
+        ClassRepository(firestore: firestore, auth: auth);
         UserRepository(firestore: firestore, auth: auth);
+        WordRepository(firestore: firestore, auth: auth);
       } catch (e, st) {
         debugPrint('Failed to initialize repository notifiers: $e\n$st');
       }

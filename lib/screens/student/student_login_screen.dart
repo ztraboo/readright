@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/current_user_model.dart';
 import '../../models/user_model.dart';
+import '../../services/class_repository.dart';
 import '../../services/user_repository.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
@@ -36,7 +37,16 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
         if (userModel != null) {
           // mobile — the Firebase Auth SDK persists the signed-in user across app restarts automatically.
           debugPrint('Restored user: ${userModel!.email}');
-          navigateToDashboard();
+
+          // Load class section for the current user
+          ClassRepository().fetchClassesByStudent(userModel!.id as String).then((classModels) {
+            if (classModels.isNotEmpty) {
+              // ignore: use_build_context_synchronously
+              context.read<CurrentUserModel>().classSection = classModels.first;
+            }
+
+            navigateToDashboard();
+          });
         } else {
           debugPrint('No persisted user found.');
           isVerifyingExistingLoginSession = false;

@@ -1,8 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 
+import '../../../models/class_model.dart';
+import '../../../models/current_user_model.dart';
 import '../../../models/user_model.dart';
+import '../../../services/class_repository.dart';
 import '../../../services/user_repository.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_styles.dart';
@@ -130,32 +134,27 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
         final teacherUid = userModel!.id;
 
         // Count number of documents in the words collection
-        final wordsSnapshot = await FirebaseFirestore.instance
-            .collection('words')
-            .get();
+        final wordsSnapshot =
+            await FirebaseFirestore.instance.collection('words').get();
         final totalWords = wordsSnapshot.docs.length;
 
-        //Create an empty class document
-        final classDocRef = await FirebaseFirestore.instance
-            .collection('classes')
-            .add({
-              'classAverage': 0.00,
-              'students': [],
-              'teacherId': teacherUid,
-              'topStruggledWords': [],
-              'classId': '',
-              'classCode': '',
-              'totalWords': totalWords,
-              'audioRetention': true,
-            });
+        // Explicitly login the user for the CurrentUserModel provider
+        // ignore: use_build_context_synchronously
+        context.read<CurrentUserModel>().logIn(userModel!);
 
-        //Retrieve the generated document ID
-        final classId = classDocRef.id;
-        final classCode = classId.substring(0, 6);
+        final classSection = ClassModel(
+          teacherId: teacherUid as String,
+          institution: institutionController.text,
+          sectionId: '001', // Default section ID
+          totalWordsToComplete: totalWords,
+        );
+        // ignore: use_build_context_synchronously
+        context.read<CurrentUserModel>().classSection = classSection;
 
-        //Update the same document with classId and classCode
-        await classDocRef.update({'classId': classId, 'classCode': classCode});
+        await ClassRepository().upsertClass(classSection);
+
       }
+        
     } on FirebaseException catch (e, st) {
       debugPrint("Error during user creation: ${e.toString()}\n$st");
 

@@ -10,7 +10,6 @@ import '../../utils/app_styles.dart';
 
 class StudentPasscodeVerificationPage extends StatefulWidget {
   final String? username;
-  // final String? passcode;
   final String? email;
 
   const StudentPasscodeVerificationPage({super.key, this.username, this.email});
@@ -60,9 +59,9 @@ class _StudentPasscodeVerificationPageState
     );
 
     // Check the passcode with Firebase to ensure it's valid.
-    final isValid = await UserRepository().verifyClassPasscode(_passcode);
+    final classSection = await UserRepository().verifyClassPasscode(_passcode);
 
-    if (!isValid) {
+    if (classSection == null) {
       _showSnackBar(
         message: 'Invalid verification code. Please try again.',
         duration: const Duration(seconds: 2),
@@ -70,6 +69,10 @@ class _StudentPasscodeVerificationPageState
       );
       return;
     }
+
+    // Set the class section in the CurrentUserModel
+    // ignore: use_build_context_synchronously
+    context.read<CurrentUserModel>().classSection = classSection;
 
     // Authenticate the user using Firebase Authentication (Email/Classcode).
     try {
