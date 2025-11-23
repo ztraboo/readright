@@ -9,6 +9,7 @@ import '../../../utils/app_styles.dart';
 import '../../../utils/enums.dart';
 import '../../../utils/fireauth_utils.dart';
 import '../../../utils/validators.dart';
+
 class TeacherRegisterPage extends StatefulWidget {
   const TeacherRegisterPage({super.key});
 
@@ -41,7 +42,11 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
     firebaseAuthPasswordPolicy = await fetchPasswordPolicy();
   }
 
-  void _showSnackBar({required String message, required Duration duration, Color? bgColor}) {
+  void _showSnackBar({
+    required String message,
+    required Duration duration,
+    Color? bgColor,
+  }) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -53,30 +58,30 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
   }
 
   void navigateToDashboard() async {
-      if (userModel != null) {
-        debugPrint('User signed in successfully: ${userModel!.email}');
-        _showSnackBar(
-          message: (userModel!.fullName.trim().isNotEmpty == true)
+    if (userModel != null) {
+      debugPrint('User signed in successfully: ${userModel!.email}');
+      _showSnackBar(
+        message: (userModel!.fullName.trim().isNotEmpty == true)
             ? 'Sign in successful! Welcome, ${userModel!.fullName}.'
             : 'Sign in successful!',
-          duration: const Duration(seconds: 2)
-        );
+        duration: const Duration(seconds: 2),
+      );
 
-        /**********************************************************
+      /**********************************************************
         Navigate to teacher dashboard after verifying login fields
 
         The fields must still be filled because of the null check,
         but any dummy values work for now
         **********************************************************/
-        await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) return;
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
 
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/teacher-dashboard',
-          (Route<dynamic> route) => false,
-        );
-    } 
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/teacher-dashboard',
+        (Route<dynamic> route) => false,
+      );
+    }
   }
 
   // Navigate to the teacher login screen if the user taps "Sign In"
@@ -89,7 +94,6 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
   }
 
   Future<void> _handleSignUp() async {
-
     // Validate the form (this triggers validators on TextFormField widgets)
     final valid = _formKey.currentState?.validate() ?? false;
     if (!valid) {
@@ -117,43 +121,41 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
           // TODO: Skipping these checks for now. May need to implement email verification later.
           // Everyone that creates and account here is automatically verified and have approved email status.
           isEmailVerified: true,
-          verificationStatus: VerificationStatus.approved
+          verificationStatus: VerificationStatus.approved,
         ),
         securePassword: passwordController.text,
       );
       //Create Class for Teacher if Successful
-        if (userModel != null) {
-              final teacherUid = userModel!.id;
+      if (userModel != null) {
+        final teacherUid = userModel!.id;
 
-              // Count number of documents in the words collection
-              final wordsSnapshot =
-                  await FirebaseFirestore.instance.collection('words').get();
-              final totalWords = wordsSnapshot.docs.length;
+        // Count number of documents in the words collection
+        final wordsSnapshot = await FirebaseFirestore.instance
+            .collection('words')
+            .get();
+        final totalWords = wordsSnapshot.docs.length;
 
-              //Create an empty class document
-              final classDocRef = await FirebaseFirestore.instance.collection('classes').add({
-                'classAverage': 0.00,
-                'students': [],
-                'teacherId': teacherUid,
-                'topStruggledWords': [],
-                'classId': '',
-                'classCode': '',
-                'totalWords':totalWords,
-                'audioRetention':true,
-              });
+        //Create an empty class document
+        final classDocRef = await FirebaseFirestore.instance
+            .collection('classes')
+            .add({
+              'classAverage': 0.00,
+              'students': [],
+              'teacherId': teacherUid,
+              'topStruggledWords': [],
+              'classId': '',
+              'classCode': '',
+              'totalWords': totalWords,
+              'audioRetention': true,
+            });
 
-              //Retrieve the generated document ID
-              final classId = classDocRef.id;
-              final classCode = classId.substring(0, 6);
+        //Retrieve the generated document ID
+        final classId = classDocRef.id;
+        final classCode = classId.substring(0, 6);
 
-              //Update the same document with classId and classCode
-              await classDocRef.update({
-                'classId': classId,
-                'classCode': classCode,
-              });
-
-            }
-        
+        //Update the same document with classId and classCode
+        await classDocRef.update({'classId': classId, 'classCode': classCode});
+      }
     } on FirebaseException catch (e, st) {
       debugPrint("Error during user creation: ${e.toString()}\n$st");
 
@@ -195,7 +197,8 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
         );
       } else if (e.code == 'username-already-exists') {
         _showSnackBar(
-          message: 'The username "${usernameController.text}" is already in use.',
+          message:
+              'The username "${usernameController.text}" is already in use.',
           duration: const Duration(seconds: 3),
           bgColor: AppColors.bgPrimaryRed,
         );
@@ -203,7 +206,8 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
         // Could not create user, so we just need to show the error message.
         debugPrint('User creation failed for email: ${emailController.text}');
         _showSnackBar(
-          message: 'User creation failed. Please check your registration fields.',
+          message:
+              'User creation failed. Please check your registration fields.',
           duration: const Duration(seconds: 3),
           bgColor: AppColors.bgPrimaryRed,
         );
@@ -229,13 +233,13 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
         child: SingleChildScrollView(
           child: Center(
             child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 46),
-                  _buildBody(),
-                ],
-              ),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 46),
+                _buildBody(),
+              ],
+            ),
           ),
         ),
       ),
@@ -268,7 +272,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
     );
   }
 
-    Widget _buildBody() {
+  Widget _buildBody() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Form(
@@ -297,14 +301,11 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
     );
   }
 
-    Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Help Kids Read,',
-          style: AppStyles.headerText,
-        ),
+        const Text('Help Kids Read,', style: AppStyles.headerText),
         const SizedBox(height: 22),
         const Text(
           "Complete the following fields to create an account:",
@@ -430,7 +431,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
           borderSide: BorderSide(color: AppColors.textPrimaryBlue, width: 5),
         ),
       ),
-      validator: (value) => Validator.validateEmail(value, ),
+      validator: (value) => Validator.validateEmail(value),
     );
   }
 
@@ -476,7 +477,8 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
           borderSide: BorderSide(color: AppColors.textPrimaryBlue, width: 5),
         ),
       ),
-      validator: (value) => Validator.validatePassword(value, firebaseAuthPasswordPolicy),
+      validator: (value) =>
+          Validator.validatePassword(value, firebaseAuthPasswordPolicy),
     );
   }
 
@@ -491,10 +493,7 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
           borderRadius: BorderRadius.circular(1000),
         ),
         child: Center(
-          child: const Text(
-            'REGISTER',
-            style: AppStyles.buttonText,
-          ),
+          child: const Text('REGISTER', style: AppStyles.buttonText),
         ),
       ),
     );
@@ -506,17 +505,10 @@ class _TeacherRegisterPageState extends State<TeacherRegisterPage> {
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Text(
-            "Already have an account? ",
-            style: AppStyles.subheaderText,
-          ),
-          Text(
-            "Sign In",
-            style: AppStyles.navigationText,
-          ),
+          Text("Already have an account? ", style: AppStyles.subheaderText),
+          Text("Sign In", style: AppStyles.navigationText),
         ],
       ),
     );
   }
-
 }

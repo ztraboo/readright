@@ -7,6 +7,7 @@ import '../../models/current_user_model.dart';
 import '../../models/user_model.dart';
 import '../../services/user_repository.dart';
 import '../../services/student_repository.dart';
+import '../../services/export_student_progress.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -38,7 +39,9 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
         _currentUser = context.read<CurrentUserModel>().user;
 
         if (_currentUser != null) {
-          debugPrint('TeacherDashboardPage: Found existing user session for ${_currentUser?.username}');
+          debugPrint(
+            'TeacherDashboardPage: Found existing user session for ${_currentUser?.username}',
+          );
         } else {
           debugPrint('TeacherDashboardPage: No existing user session found.');
         }
@@ -93,7 +96,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
 
     // Creates a map from student UID to student name
     final uidToName = {
-      for (var doc in userSnapshot.docs) 
+      for (var doc in userSnapshot.docs)
         doc.data()['id']: doc.data()['fullName'],
     };
 
@@ -233,108 +236,150 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                     _audioRetentionLoaded = true;
                   }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Displays teacher name (after retrieving)
-                      FutureBuilder<String>(
-                        future: fetchTeacherName(classData['teacherId'] ?? ''),
-                        builder: (context, teacherSnapshot) {
-                          final teacherName =
-                              teacherSnapshot.data ?? 'Loading...';
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Teacher',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(teacherName),
-                              const Divider(height: 32, thickness: 1),
-                            ],
-                          );
-                        },
-                      ),
+                  return SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Displays teacher name (after retrieving)
+                        FutureBuilder<String>(
+                          future: fetchTeacherName(
+                            classData['teacherId'] ?? '',
+                          ),
+                          builder: (context, teacherSnapshot) {
+                            final teacherName =
+                                teacherSnapshot.data ?? 'Loading...';
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Teacher',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(teacherName),
+                                const Divider(height: 32, thickness: 1),
+                              ],
+                            );
+                          },
+                        ),
 
-                      // Class Code
-                      Text(
-                        'Class Code',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(classData['classCode'] ?? ''),
-                      const Divider(height: 32, thickness: 1),
+                        // Class Code
+                        Text(
+                          'Class Code',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(classData['classCode'] ?? ''),
+                        const Divider(height: 32, thickness: 1),
 
-                      // Class Average
-                      Text(
-                        'Class Average',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('${classData['classAverage'] ?? 0}%'),
-                      const Divider(height: 32, thickness: 1),
+                        // Class Average
+                        Text(
+                          'Class Average',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('${classData['classAverage'] ?? 0}%'),
+                        const Divider(height: 32, thickness: 1),
 
-                      // Top Struggled Words
-                      Text(
-                        'Top Struggled Words',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: (classData['topStruggledWords'] ?? [])
-                            .map<Widget>((w) => Text('• $w'))
-                            .toList(),
-                      ),
-                      const SizedBox(height: 8),
+                        // Top Struggled Words
+                        Text(
+                          'Top Struggled Words',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children:
+                              (classData['topStruggledWords'] == null ||
+                                  (classData['topStruggledWords'] as List)
+                                      .isEmpty)
+                              ? [const Text('None')]
+                              : (classData['topStruggledWords'] as List)
+                                    .map<Widget>((w) => Text('• $w'))
+                                    .toList(),
+                        ),
+                        const Divider(height: 32, thickness: 1),
+                        const SizedBox(height: 8),
 
-                      // Audio Retention Checkbox
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _audioRetention,
-                            onChanged: (value) async {
-                              if (value == null) return;
-
-                              setState(() {
-                                _audioRetention = value;
-                              });
-
-                              final classId = await fetchClassId();
-                              if (classId == null) return;
-
-                              await FirebaseFirestore.instance
-                                  .collection('classes')
-                                  .doc(classId)
-                                  .update({'audioRetention': value});
+                        // Audio Retention Checkbox
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Enable Audio Retention:',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Checkbox(
+                              value: _audioRetention,
+                              onChanged: (value) async {
+                                if (value == null) return;
+                                setState(() {
+                                  _audioRetention = value;
+                                });
+                                final classId = await fetchClassId();
+                                if (classId == null) return;
+                                await FirebaseFirestore.instance
+                                    .collection('classes')
+                                    .doc(classId)
+                                    .update({'audioRetention': value});
+                              },
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 32, thickness: 1),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Additional Options:',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        // Word Dashboard Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.book),
+                            label: const Text('Access Word Dashboard'),
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/teacher-word-dashboard',
+                              );
                             },
                           ),
-                          const SizedBox(width: 8),
-                          const Text('Enable Audio Retention'),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Export CSV Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.download),
+                            label: const Text('Export Class Progress to .csv'),
+                            onPressed: () {
+                              if (_currentUser?.id != null) {
+                                exportStudentProgress(
+                                  teacherUid: _currentUser!.id!,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
           ],
         ),
-
-        // Button to navigate to the teacher word dashboard.
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.pushNamed(context, '/teacher-word-dashboard');
-          },
-          icon: const Icon(Icons.book),
-          label: const Text('Word Dashboard'),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
@@ -479,7 +524,6 @@ class _StudentsTabState extends State<StudentsTab> {
               ),
             ),
             const SizedBox(width: 8),
-
             // Add student button
             IconButton(
               icon: const Icon(Icons.person_add),
@@ -487,7 +531,6 @@ class _StudentsTabState extends State<StudentsTab> {
               onPressed: () => _showAddStudentDialog(context),
             ),
             const SizedBox(width: 8),
-
             // Sort
             PopupMenuButton<String>(
               icon: const Icon(Icons.sort),
@@ -549,8 +592,8 @@ class _StudentsTabState extends State<StudentsTab> {
               final filteredStudents = students
                   .where(
                     (s) => (s['fullName'] as String).toLowerCase().contains(
-                          searchText,
-                        ),
+                      searchText,
+                    ),
                   )
                   .toList();
 
@@ -558,9 +601,9 @@ class _StudentsTabState extends State<StudentsTab> {
               filteredStudents.sort((a, b) {
                 int result;
                 if (sortBy == 'name') {
-                  result = (a['fullName'] as String)
-                      .toLowerCase()
-                      .compareTo((b['fullName'] as String).toLowerCase());
+                  result = (a['fullName'] as String).toLowerCase().compareTo(
+                    (b['fullName'] as String).toLowerCase(),
+                  );
                 } else {
                   final aPct = (a['totalWords'] == 0)
                       ? 0
@@ -596,8 +639,7 @@ class _StudentsTabState extends State<StudentsTab> {
                           Text('Words completed: $completed/$totalWords'),
                           const SizedBox(height: 4),
                           LinearProgressIndicator(
-                            value:
-                                totalWords == 0 ? 0 : completed / totalWords,
+                            value: totalWords == 0 ? 0 : completed / totalWords,
                             minHeight: 8,
                             backgroundColor: Colors.grey[300],
                             color: Colors.green,
