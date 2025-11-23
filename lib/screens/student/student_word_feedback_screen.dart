@@ -10,8 +10,10 @@ import '../../audio/stream/pcm_player.dart';
 import '../../audio/stt/pronunciation_assessor.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/current_user_model.dart';
+import 'package:readright/models/class_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/services/attempt_repository.dart';
+import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import '../../utils/app_colors.dart';
@@ -31,6 +33,8 @@ class StudentWordFeedbackPage extends StatefulWidget {
 class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
 
   late final UserModel? _currentUser;
+  late final ClassModel? _currentClassSection;
+
   String? practiceWord = '';
   WordLevel? wordLevel;
   bool hasNextWord = true;
@@ -85,7 +89,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         _currentUser = context.read<CurrentUserModel>().user;
 
         if (_currentUser != null) {
-          debugPrint('StudentWordFeedbackPage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}');
+          _currentClassSection = context.read<CurrentUserModel>().classSection;
+
+          debugPrint('StudentWordFeedbackPage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}, ClassSection: ${_currentClassSection?.id}');
         } else {
           debugPrint('StudentWordFeedbackPage: No persisted user found.');
         }
@@ -171,7 +177,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       // Fetch attempts for the current user from the database (await so userAttempts is initialized).
       final List<AttemptModel> userAttempts = await AttemptRepository().fetchAttemptsByUser(
         _currentUser?.id ?? '',
-        classId: 'cXEZyKGck7AHvcP6Abvn',
+        classId: _currentClassSection?.id ?? 'Unknown',
       );
       debugPrint('Fetched ${userAttempts.length} attempts for user ${_currentUser?.id}');
 

@@ -16,6 +16,17 @@ class FirestoreUtils {
     return digest.toString();
   }
 
+  /// Generate a deterministic id from `institution`, `teacherId`, and `sectionId`.
+  ///
+  /// This uses SHA-256 over the string `<institution>|<teacherId>|<sectionId>` and returns the
+  /// hex digest. The result is stable across runs for the same inputs.
+  static String generateDeterministicClassId(String institution, String teacherId, String sectionId) {
+    final input = '$institution|$teacherId|$sectionId';
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
   /// Generate a deterministic id from `text` and `levelName`.
   ///
   /// This uses SHA-256 over the string `<levelName>|<text>` and returns the

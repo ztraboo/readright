@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 
 import 'class/class_student_details_screen.dart';
 import '../../models/current_user_model.dart';
+import '../../models/class_model.dart';
 import '../../models/user_model.dart';
-import '../../services/user_repository.dart';
-import '../../services/student_repository.dart';
+import '../../services/class_repository.dart';
 import '../../services/export_student_progress.dart';
+import '../../services/student_repository.dart';
+import '../../services/user_repository.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -18,6 +20,7 @@ class TeacherDashboardPage extends StatefulWidget {
 
 class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
   UserModel? _currentUser;
+  ClassModel? _classSection;
 
   // Audio retention state (loaded once)
   bool _audioRetention = false;
@@ -44,6 +47,14 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
           );
         } else {
           debugPrint('TeacherDashboardPage: No existing user session found.');
+        } 
+
+        _classSection = context.read<CurrentUserModel>().classSection;
+
+        if (_classSection != null) {
+          debugPrint('TeacherDashboardPage: Found existing class section for teacher ${_currentUser?.username}');
+        } else {
+          debugPrint('TeacherDashboardPage: No existing class section found for teacher ${_currentUser?.username}');
         }
       });
     });
@@ -56,31 +67,24 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
 
   // Get students in teacher's class.
   Future<List<Map<String, dynamic>>> fetchStudents() async {
-    final teacherUid = await this.teacherUid;
 
-    if (teacherUid.isEmpty) {
+    // Ensure students and classSection are loaded into the CurrentUserModel
+    await context.read<CurrentUserModel>().loadStudents();
+
+    if (_classSection?.teacherId.isEmpty ?? true) {
       throw Exception('No teacher is currently signed in.');
     }
 
-    // Get the teacher's class
-    final classSnapshot = await FirebaseFirestore.instance
-        .collection('classes')
-        .where('teacherId', isEqualTo: teacherUid)
-        .get();
-
-    if (classSnapshot.docs.isEmpty) return [];
-
-    final classData = classSnapshot.docs.first.data();
-    final totalWords = classData['totalWords'] ?? 0;
-
-    // Get student UIDs from the class
     final studentUids = <String>[];
-    if (classData.containsKey('students')) {
-      final studentsList = List<String>.from(classData['students']);
+    final studentIds = _classSection?.studentIds ?? [];
+    if (studentIds.isNotEmpty) {
+      final studentsList = List<String>.from(studentIds);
       studentUids.addAll(studentsList);
-    }
+    } 
 
-    if (studentUids.isEmpty) return [];
+    if (studentUids.isEmpty) {
+      return [];
+    } 
 
     // Get student progress
     final studentSnapshot = await FirebaseFirestore.instance
@@ -108,7 +112,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
         'uid': uid,
         'fullName': uidToName[uid] ?? 'No Name',
         'completed': data['completed'] ?? 0,
-        'totalWords': totalWords,
+        'totalWords': _classSection?.totalWordsToComplete ?? 0,
       };
     }).toList();
   }
@@ -412,6 +416,7 @@ class _StudentsTabState extends State<StudentsTab> {
   // Opens a dialog allowing the teacher to manually create a new student.
   // Uses StudentRepository, which preserves teacher authentication.
   void _showAddStudentDialog(BuildContext context) {
+    final parentContext = context;
     final fullNameController = TextEditingController();
     final emailController = TextEditingController();
     final usernameController = TextEditingController();
@@ -473,6 +478,23 @@ class _StudentsTabState extends State<StudentsTab> {
 
                   // Ensures context is still valid before using it.
                   if (!context.mounted) return;
+                  
+                  // Ask the parent state to re-fetch students and rebuild so the parent's
+                  // FutureBuilder calls fetchStudents() again.
+                  final parentState =
+                    parentContext.findAncestorStateOfType<_TeacherDashboardPageState>();
+
+                  // Reloads students in CurrentUserModel using the parent context (the dialog's context
+                  // may not see the same providers / ancestors).
+                  await parentContext.read<CurrentUserModel>().loadStudents();
+
+                  // Ensure the StudentsTab state is still mounted before using it or the parent state.
+                  if (!mounted) return;
+
+                  if (parentState != null) {
+                    // Trigger parent to rebuild so it re-creates the Future passed to the StudentsTab.
+                    parentState.setState(() {});
+                  }
 
                   fullNameController.clear();
                   emailController.clear();

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:readright/models/class_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/utils/enums.dart';
 import 'package:readright/utils/firestore_metadata.dart';
@@ -234,14 +235,16 @@ class UserRepository {
   }
 
   // Verify if a class passcode exists in the 'classes' collection.
-  Future<bool> verifyClassPasscode(String passcode) async {
+  Future<ClassModel?> verifyClassPasscode(String passcode) async {
     final query = await _db
         .collection('classes')
         .where('classCode', isEqualTo: passcode)
         .limit(1)
         .get();
 
-    return query.docs.isNotEmpty;
+    return query.docs.isNotEmpty
+        ? ClassModel.fromJson(query.docs.first.data())
+        : throw Exception('Invalid class passcode');
   }
 
 }
