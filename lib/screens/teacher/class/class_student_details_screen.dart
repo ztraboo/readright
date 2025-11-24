@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'package:readright/models/word_model.dart';
+import 'package:readright/services/word_respository.dart';
+
 class ClassStudentDetails extends StatefulWidget {
   final String studentUid;
 
@@ -98,14 +101,26 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
     final classData =
         classDoc.docs.isNotEmpty ? classDoc.docs.first.data() : {};
 
+    // Locate the word text from struggled word document IDs
+    final List<dynamic> wordStruggledIds = List.from(studentData['wordStruggledIds'] ?? []);
+    for (int i = 0; i < wordStruggledIds.length; i++) {
+      final wordId = wordStruggledIds[i];
+      final wordModel = await WordRepository().fetchWordById(wordId);
+      if (wordModel != null) {
+        wordStruggledIds[i] = wordModel.text;
+      } else {
+        wordStruggledIds[i] = '';
+      }
+    }
+
     // Mapping returned to the FutureBuilder
     return {
       'fullName': userData['fullName'] ?? 'No Name',
       'username': userData['username'] ?? 'No Username',
-      'completed': studentData['completed'] ?? 0,
-      'totalAttempts': studentData['totalAttempts'] ?? 0,
-      'averageScore': studentData['averageScore'] ?? 0.0,
-      'topStruggledWords': List<String>.from(studentData['topStruggled'] ?? []),
+      'countWordsCompleted': studentData['countWordsCompleted'] ?? 0,
+      'countWordsAttempted': studentData['countWordsAttempted'] ?? 0,
+      'averageWordAttemptScore': studentData['averageWordAttemptScore'] ?? 0.0,
+      'wordStruggledIds': wordStruggledIds,
       'totalWordsToComplete': classData['totalWordsToComplete'] ?? 0,
     };
   }
@@ -140,13 +155,14 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                   // Firestore or parsing error
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
+          
 
                 final data = snapshot.data ?? {};
                 final fullName = data['fullName'];
                 final username = data['username'];
-                final averageScore = data['averageScore'];
-                final totalAttempts = data['totalAttempts'];
-                final topStruggledWords = data['topStruggledWords'];
+                final averageWordAttemptScore = double.parse(((data['averageWordAttemptScore'] ?? 0.0) * 100).toStringAsFixed(2));
+                final countWordsAttempted = data['countWordsAttempted'] ?? 0;
+                final topStruggledWords = data['wordStruggledIds'] ?? [];
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -174,7 +190,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('Average Score: $averageScore%',
+                      Text('Average Score: $averageWordAttemptScore%',
                           style: const TextStyle(fontSize: 16)),
                       const Divider(height: 32, thickness: 1),
 
@@ -183,7 +199,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('Total Attempts: $totalAttempts',
+                      Text('Total Attempts: $countWordsAttempted',
                           style: const TextStyle(fontSize: 16)),
                       const Divider(height: 32, thickness: 1),
 
@@ -220,7 +236,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                 }
 
                 final data = snapshot.data ?? {};
-                final completed = data['completed'];
+                final countWordsCompleted = data['countWordsCompleted'];
                 final totalWordsToComplete = data['totalWordsToComplete'];
 
                 return Padding(
@@ -230,7 +246,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                     children: [
                       // Progress Section
                       Text(
-                        'Words completed: $completed / $totalWordsToComplete',
+                        'Words completed: $countWordsCompleted / $totalWordsToComplete',
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -240,7 +256,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                       LinearProgressIndicator(
                         value: totalWordsToComplete == 0
                             ? 0
-                            : completed / totalWordsToComplete,
+                            : countWordsCompleted / totalWordsToComplete,
                         minHeight: 12,
                         backgroundColor: Colors.grey[300],
                         color: Colors.green,

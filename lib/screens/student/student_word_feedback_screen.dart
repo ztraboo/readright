@@ -239,12 +239,14 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              (_currentScore >= _passingThresholdStars)
-                  ? Column(children: [
-                        _buildDashboardNextButton(),
-                      ],
-                    )
-                  : Container(),
+              // Always show the next button even if the user scores low.
+              _buildDashboardNextButton(),
+              // (_currentScore >= _passingThresholdStars)
+              //     ? Column(children: [
+              //           _buildDashboardNextButton(),
+              //         ],
+              //       )
+              //     : Container(),
             ],
           ),
         ),
@@ -458,7 +460,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         ),
         child: const Center(
           child: Text(
-            'REPLAY',
+            'PLAYBACK',
             style: AppStyles.buttonText,
           ),
         ),

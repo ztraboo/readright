@@ -6,10 +6,8 @@ import 'class/class_student_details_screen.dart';
 import '../../models/current_user_model.dart';
 import '../../models/class_model.dart';
 import '../../models/user_model.dart';
-import '../../services/class_repository.dart';
 import '../../services/export_student_progress.dart';
-import '../../services/student_repository.dart';
-import '../../services/user_repository.dart';
+import '../../services/student_progress_repository.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -111,7 +109,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
       return {
         'uid': uid,
         'fullName': uidToName[uid] ?? 'No Name',
-        'completed': data['completed'] ?? 0,
+        'countWordsCompleted': data['countWordsCompleted'] ?? 0,
         'totalWordsToComplete': _classSection?.totalWordsToComplete ?? 0,
       };
     }).toList();
@@ -469,7 +467,7 @@ class _StudentsTabState extends State<StudentsTab> {
 
                 try {
                   // Creates the student without switching authentication.
-                  await StudentRepository.registerStudentByTeacherId(
+                  await StudentProgressRepository.registerStudentByTeacherId(
                     username: username,
                     email: email,
                     fullName: fullName,
@@ -629,10 +627,10 @@ class _StudentsTabState extends State<StudentsTab> {
                 } else {
                   final aPct = (a['totalWordsToComplete'] == 0)
                       ? 0
-                      : (a['completed'] / a['totalWordsToComplete']);
+                      : (a['countWordsCompleted'] / a['totalWordsToComplete']);
                   final bPct = (b['totalWordsToComplete'] == 0)
                       ? 0
-                      : (b['completed'] / b['totalWordsToComplete']);
+                      : (b['countWordsCompleted'] / b['totalWordsToComplete']);
                   result = aPct.compareTo(bPct);
                 }
                 return ascending ? result : -result;
@@ -647,7 +645,7 @@ class _StudentsTabState extends State<StudentsTab> {
                 itemCount: filteredStudents.length,
                 itemBuilder: (context, index) {
                   final student = filteredStudents[index];
-                  final completed = student['completed'] ?? 0;
+                  final countWordsCompleted = student['countWordsCompleted'] ?? 0;
                   final totalWordsToComplete = student['totalWordsToComplete'] ?? 0;
 
                   return Card(
@@ -658,10 +656,10 @@ class _StudentsTabState extends State<StudentsTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 4),
-                          Text('Words completed: $completed/$totalWordsToComplete'),
+                          Text('Words completed: $countWordsCompleted/$totalWordsToComplete'),
                           const SizedBox(height: 4),
                           LinearProgressIndicator(
-                            value: totalWordsToComplete == 0 ? 0 : completed / totalWordsToComplete,
+                            value: totalWordsToComplete == 0 ? 0 : countWordsCompleted / totalWordsToComplete,
                             minHeight: 8,
                             backgroundColor: Colors.grey[300],
                             color: Colors.green,

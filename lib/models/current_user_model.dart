@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/class_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/services/class_repository.dart';
@@ -9,9 +8,6 @@ import 'package:readright/utils/enums.dart';
 class CurrentUserModel extends ChangeNotifier {
   UserModel? _user;
   UserModel? get user => _user;
-
-  List<AttemptModel> _attempts = [];
-  List<AttemptModel> get attempts => _attempts;
 
   ClassModel? _classSection;
   set classSection(ClassModel? classModel) {
@@ -77,7 +73,6 @@ class CurrentUserModel extends ChangeNotifier {
 
     _user = null;
     _classSection = null;
-    _attempts = [];
     notifyListeners();
   }
   
