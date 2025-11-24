@@ -241,12 +241,6 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               const SizedBox(height: 20),
               // Always show the next button even if the user scores low.
               _buildDashboardNextButton(),
-              // (_currentScore >= _passingThresholdStars)
-              //     ? Column(children: [
-              //           _buildDashboardNextButton(),
-              //         ],
-              //       )
-              //     : Container(),
             ],
           ),
         ),
@@ -493,23 +487,39 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   // }
 
   Widget _buildRetryButton() {
-    return GestureDetector(
-      onTap: _handleRetry,
-      child: Container(
-        height: 44,
-        width: 136,
-        decoration: BoxDecoration(
-          color: AppColors.buttonPrimaryOrange,
-          borderRadius: BorderRadius.circular(1000),
-        ),
-        child: const Center(
-          child: Text(
-            'RETRY',
-            style: AppStyles.buttonText,
+    return
+    (_currentScore >= _passingThresholdStars)
+      ? Container(
+          height: 44,
+          width: 136,
+          decoration: BoxDecoration(
+            color: AppColors.bgPrimaryGray,
+            borderRadius: BorderRadius.circular(1000),
+          ),
+          child: const Center(
+            child: Text(
+              'RETRY',
+              style: AppStyles.buttonText,
+            ),
+          ),
+        )
+      : GestureDetector(
+        onTap: _handleRetry,
+        child: Container(
+          height: 44,
+          width: 136,
+          decoration: BoxDecoration(
+            color: AppColors.buttonPrimaryOrange,
+            borderRadius: BorderRadius.circular(1000),
+          ),
+          child: const Center(
+            child: Text(
+              'RETRY',
+              style: AppStyles.buttonText,
+            ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildDashboardNextButton() {
