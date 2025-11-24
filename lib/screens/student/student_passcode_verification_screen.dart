@@ -7,6 +7,7 @@ import 'package:readright/services/user_repository.dart';
 
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
+import '../../utils/enums.dart';
 
 class StudentPasscodeVerificationPage extends StatefulWidget {
   final String? username;
@@ -90,6 +91,36 @@ class _StudentPasscodeVerificationPageState
       );
       return;
     } 
+
+    // At this point, logging in as a teacher should be unsuccessful
+    // do to invalid username/password combination.
+    // We're performing this extra check to ensure the user role is
+    // correct should the teacher be able to log in successfully.
+    // Check to ensure the user has the correct role (student).
+    // Redirect if not a student to the reader selection screen.
+    // ignore: use_build_context_synchronously
+    final currentUser = context.read<CurrentUserModel>().user;
+    if (currentUser == null || currentUser.role != UserRole.student) {
+      _showSnackBar(
+        message: 'Access denied. This account is not registered as a student.',
+        duration: const Duration(seconds: 2),
+        bgColor: AppColors.bgPrimaryRed,
+      );
+
+      Future.delayed(const Duration(seconds: 3)).then((_) {
+          if (!mounted) return;
+          setState(() {
+            // Traverse back to the reader selection screen
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/reader-selection',
+              (Route<dynamic> route) => false,
+            );
+          });
+        });
+      
+      return;
+    }
 
     await Future.delayed(const Duration(seconds: 3));
 
