@@ -69,16 +69,17 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         });
       }
 
+      // Normalize passing threshold score to star rating.
+      _normalizeSTTScoreToStars(rawScore: AppScoring.passingThreshold).then((normalized) {
+        setState(() {
+          debugPrint("StudentWordFeedbackPage: Passing threshold STT score of ${AppScoring.passingThreshold} is represented as ${normalized} stars.");
+          _passingThresholdStars = normalized;
+        });
+      });
+
       // Normalize score based on attemptResult score value if available.
       // Only normalize if score is greater than zero.
       if (_attemptResult != null && _attemptResult!.score > 0) {
-        _normalizeSTTScoreToStars(rawScore: AppScoring.passingThreshold).then((normalized) {
-          setState(() {
-            debugPrint("StudentWordFeedbackPage: Passing threshold STT score of ${AppScoring.passingThreshold} is represented as ${normalized} stars.");
-            _passingThresholdStars = normalized;
-          });
-        });
-
         _normalizeSTTScoreToStars(rawScore: _attemptResult?.score as double).then((normalized) {
           setState(() {
             debugPrint("StudentWordFeedbackPage: Speech-To-Text (STT) score of ${_attemptResult?.score} is represented as ${normalized} stars.");
@@ -487,8 +488,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   // }
 
   Widget _buildRetryButton() {
-    return
-    (_currentScore >= _passingThresholdStars)
+    return (_currentScore >= _passingThresholdStars)
       ? Container(
           height: 44,
           width: 136,
