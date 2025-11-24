@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
+import 'package:readright/services/student_progress_repository.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
@@ -83,6 +84,7 @@ class _AppInitializerState extends State<AppInitializer> {
       try {
         AttemptRepository(firestore: firestore, auth: auth);
         ClassRepository(firestore: firestore, auth: auth);
+        StudentProgressRepository(firestore: firestore, auth: auth);
         UserRepository(firestore: firestore, auth: auth);
         WordRepository(firestore: firestore, auth: auth);
       } catch (e, st) {

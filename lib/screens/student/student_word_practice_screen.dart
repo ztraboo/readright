@@ -24,11 +24,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/class_model.dart';
 import 'package:readright/models/current_user_model.dart';
+import 'package:readright/models/student_progress_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/models/word_model.dart';
 import 'package:readright/services/attempt_repository.dart';
-import 'package:readright/services/class_repository.dart';
-import 'package:readright/services/user_repository.dart';
+import 'package:readright/services/student_progress_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
@@ -82,7 +82,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
   void checkConnection() async {
     online = await hasInternetConnection();
-    debugPrint('Online: $online');
+    debugPrint('StudentWordPracticePage: Online: $online');
   }
 
   final FlutterTts flutterTts = FlutterTts();
@@ -118,7 +118,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           wordLevel = args['wordLevel'] as WordLevel?;
         });
       }
-      debugPrint('StudentWordPracticePage - Practice Word: ${practiceWord?.text}, Word Level: ${wordLevel?.name}');
+      debugPrint('StudentWordPracticePage: ${practiceWord?.text}, Word Level: ${wordLevel?.name}');
 
       setState(() {
         _currentUser = context.read<CurrentUserModel>().user;
@@ -192,7 +192,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       // Only pick a sentence index if we haven't already set one.
       final word = practiceWord?.text.trim().toLowerCase();
       final idx = (DateTime.now().millisecondsSinceEpoch % 3) + 1;
-      debugPrint('Selected sentence index: $idx for word: $word');
+      debugPrint('StudentWordPracticePage: Selected sentence index: $idx for word: $word');
       setState(() {
         practiceSentenceId = 'sentence_$idx';
         practiceSentenceIndex = idx;
@@ -206,7 +206,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       final perm = await _pcmRecorder.checkAndRequestPermission();
       // checkAndRequestPermission now handles UI for permanentlyDenied (dialogs/openSettings).
       // Here we only abort if permission was not granted.
-      debugPrint('Microphone permission status: $perm');
+      debugPrint('StudentWordPracticePage: Microphone permission status: $perm');
       if (perm == PermissionStatus.permanentlyDenied) {
         // Build a show dialog to inform user to open settings if they
         // clicked "Don't Allow" on initial prompt.
@@ -259,7 +259,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         }
       }
     } catch (e) {
-      debugPrint('Permission check error: $e');
+      debugPrint('StudentWordPracticePage: Permission check error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -270,6 +270,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     }
   }
 
+  // Store an attempt record and student progress in Firestore.
   Future<void> storeAttempt({
     required String classId,
     required String userId,
@@ -295,11 +296,26 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       deviceOS: await DeviceUtils.getOsVersion(),
     );
 
+    // Save attempt record to Firestore.
     try {
       await AttemptRepository().upsertAttempt(attempt);
-      debugPrint('Attempt record added successfully for wordId: $wordId');
+      debugPrint('StudentWordPracticePage: Attempt record added successfully for wordId: $wordId');
     } catch (e) {
-      debugPrint('Error adding attempt record: $e');
+      debugPrint('StudentWordPracticePage: Error adding attempt record: $e');
+    }
+
+    // Save student progress update to Firestore.
+    try {
+      final studentProgress = await StudentProgressRepository().fetchProgressByUid(userId);
+
+      await StudentProgressRepository().upsertProgress(
+        studentProgress!
+          .addAttemptId(attempt.id, wordId: wordId, score: score)
+      );
+
+      debugPrint('StudentWordPracticePage: Student progress updated successfully for userId: $userId');
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: Error updating student progress: $e');
     }
   }
 
@@ -312,10 +328,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     );
 
     try {
-      debugPrint('Uploading file from: ${file.path}');
+      debugPrint('StudentWordPracticePage: Uploading file from: ${file.path}');
 
       if (!file.existsSync()) {
-        debugPrint('File does not exist at: ${file.path}');
+        debugPrint('StudentWordPracticePage: File does not exist at: ${file.path}');
         return '';
       }
 
@@ -333,8 +349,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         // TODO: Add STT data here
       });
     } catch (e, stackTrace) {
-      debugPrint('general error: $e');
-      debugPrint('stack trace:\n$stackTrace');
+      debugPrint('StudentWordPracticePage: general error: $e');
+      debugPrint('StudentWordPracticePage: stack trace:\n$stackTrace');
     }
 
     return storageRef.fullPath;
@@ -347,13 +363,13 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   }
 
   Future<void> _handleRecord() async {
-    debugPrint('_handledRecord pressed ...');
+    debugPrint('StudentWordPracticePage: _handledRecord pressed ...');
 
     // prevent multiple taps while processing
     if (_isProcessingRecording) return;
 
     if (!_isRecording) {
-      debugPrint('Starting recording...');
+      debugPrint('StudentWordPracticePage: Starting recording...');
 
       if (!mounted) return;
       setState(() {
@@ -386,7 +402,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           bufferToMemory: true,
         );
       } catch (e) {
-        debugPrint('Failed to start recorder: $e');
+        debugPrint('StudentWordPracticePage: Failed to start recorder: $e');
         if (!mounted) return;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
@@ -409,14 +425,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       try {
         await _pcmRecorder.stop();
       } catch (e) {
-        debugPrint('Error stopping recorder: $e');
+        debugPrint('StudentWordPracticePage: Error stopping recorder: $e');
       }
 
     }
   }
 
   Future<void> _stopRecording() async {
-    debugPrint('_stopRecording pressed...');
+    debugPrint('StudentWordPracticePage: _stopRecording pressed...');
 
     await _pcmRecorder.stop();
 
@@ -470,18 +486,18 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           uploadPath = aacPath;
         } catch (e, st) {
           debugPrint(
-            'PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV',
+            'StudentWordPracticePage: PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV',
           );
           try {
             fbStoragePath = await uploadAudioFile(wavPath);
             uploadPath = wavPath;
           } catch (e3, st3) {
-            debugPrint('Fallback upload (WAV) also failed: $e3\n$st3');
+            debugPrint('StudentWordPracticePage: Fallback upload (WAV) also failed: $e3\n$st3');
           }
         }
       } catch (e, st) {
         debugPrint(
-          'PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC',
+          'StudentWordPracticePage: PCM->WAV conversion failed: $e\n$st -- cannot produce WAV/AAC',
         );
       }
 
@@ -498,7 +514,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         }
       } catch (e, st) {
         if (e is SocketException) {
-          debugPrint("No internet connection, falling back to local STT, Cheetah");
+          debugPrint("StudentWordPracticePage: No internet connection, falling back to local STT, Cheetah");
           try {
             attemptResult = await _cheetahAssessor.assess(referenceText: practiceWord!.text, audioBytes: pcmBytes, locale: 'en-US');
             final recognizedText = attemptResult?.recognizedText ?? '';
@@ -508,10 +524,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
               });
             }
           } catch (e, st) {
-            debugPrint('Error running final assess on buffered PCM: $e\n$st');
+            debugPrint('StudentWordPracticePage: Error running final assess on buffered PCM: $e\n$st');
           }
         }
-        debugPrint('Error running final assess on buffered PCM: $e\n$st');
+        debugPrint('StudentWordPracticePage: Error running final assess on buffered PCM: $e\n$st');
       }
 
       // Store attempt record in Firestore
@@ -542,15 +558,15 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           await wavFile.delete();
         }
       } catch (e) {
-        debugPrint('Failed to delete temp files: $e');
+        debugPrint('StudentWordPracticePage: Failed to delete temp files: $e');
       }
     } else {
-      debugPrint('No PCM bytes available to save after recording.');
+      debugPrint('StudentWordPracticePage: No PCM bytes available to save after recording.');
     }
 
     // If we were unable to upload any audio file, show an error and abort.
     if (uploadPath == null) {
-      debugPrint('No audio file was uploaded due to previous errors.');
+      debugPrint('StudentWordPracticePage: No audio file was uploaded due to previous errors.');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -605,7 +621,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   }
 
   Future<void> playRecording() async {
-    debugPrint('playRecording called');
+    debugPrint('StudentWordPracticePage: playRecording called');
 
     await _pcmPlayer.stop();
 
@@ -629,7 +645,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     try {
       assetData = await rootBundle.load(assetPath);
     } catch (assetErr) {
-      debugPrint('TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      debugPrint('StudentWordPracticePage: TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
       return;
     }
 
@@ -640,7 +656,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           await player.openPlayer();
         } catch (openErr) {
-          debugPrint('flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          debugPrint('StudentWordPracticePage: flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
           return;
         }
 
@@ -653,21 +669,21 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             },
           );
         } catch (startErr) {
-          debugPrint('flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          debugPrint('StudentWordPracticePage: flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
           return;
         }
 
         // Wait until playback completes (whenFinished completes the completer).
         await completer.future;
       } catch (playErr) {
-        debugPrint('Asset playback error: $playErr, falling back to TTS.');
+        debugPrint('StudentWordPracticePage: Asset playback error: $playErr, falling back to TTS.');
         return;
       } finally {
         // Best-effort cleanup. Ignore individual errors but log them.
         try {
           await player.stopPlayer();
         } catch (stopErr) {
-          debugPrint('Error stopping flutter_sound player: $stopErr');
+          debugPrint('StudentWordPracticePage: Error stopping flutter_sound player: $stopErr');
         }
         try {
           await player.closePlayer();
@@ -691,7 +707,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     try {
       assetData = await rootBundle.load(assetPath);
     } catch (assetErr) {
-      debugPrint('TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      debugPrint('StudentWordPracticePage: TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
       await _speakTts(word);
       return;
     }
@@ -703,7 +719,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           await player.openPlayer();
         } catch (openErr) {
-          debugPrint('flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          debugPrint('StudentWordPracticePage: flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
           await _speakTts(word);
           return;
         }
@@ -717,7 +733,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             },
           );
         } catch (startErr) {
-          debugPrint('flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          debugPrint('StudentWordPracticePage: flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
           await _speakTts(word);
           return;
         }
@@ -725,7 +741,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         // Wait until playback completes (whenFinished completes the completer).
         await completer.future;
       } catch (playErr) {
-        debugPrint('Asset playback error: $playErr, falling back to TTS.');
+        debugPrint('StudentWordPracticePage: Asset playback error: $playErr, falling back to TTS.');
         await _speakTts(word);
         return;
       } finally {
@@ -733,12 +749,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           await player.stopPlayer();
         } catch (stopErr) {
-          debugPrint('Error stopping flutter_sound player: $stopErr');
+          debugPrint('StudentWordPracticePage: Error stopping flutter_sound player: $stopErr');
         }
         try {
           await player.closePlayer();
         } catch (closeErr) {
-          debugPrint('Error closing flutter_sound audio session: $closeErr');
+          debugPrint('StudentWordPracticePage: Error closing flutter_sound audio session: $closeErr');
         }
       }
   }
@@ -757,7 +773,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     try {
       assetData = await rootBundle.load(assetPath);
     } catch (assetErr) {
-      debugPrint('TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      debugPrint('StudentWordPracticePage: TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
       await _speakTts(word);
       return;
     }
@@ -769,7 +785,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           await player.openPlayer();
         } catch (openErr) {
-          debugPrint('flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          debugPrint('StudentWordPracticePage: flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
           await _speakTts(word);
           return;
         }
@@ -783,7 +799,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             },
           );
         } catch (startErr) {
-          debugPrint('flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          debugPrint('StudentWordPracticePage: flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
           await _speakTts(word);
           return;
         }
@@ -791,7 +807,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         // Wait until playback completes (whenFinished completes the completer).
         await completer.future;
       } catch (playErr) {
-        debugPrint('Asset playback error: $playErr, falling back to TTS.');
+        debugPrint('StudentWordPracticePage: Asset playback error: $playErr, falling back to TTS.');
         await _speakTts(word);
         return;
       } finally {
@@ -799,12 +815,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           await player.stopPlayer();
         } catch (stopErr) {
-          debugPrint('Error stopping flutter_sound player: $stopErr');
+          debugPrint('StudentWordPracticePage: Error stopping flutter_sound player: $stopErr');
         }
         try {
           await player.closePlayer();
         } catch (closeErr) {
-          debugPrint('Error closing flutter_sound audio session: $closeErr');
+          debugPrint('StudentWordPracticePage: Error closing flutter_sound audio session: $closeErr');
         }
       }
   }
@@ -816,7 +832,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       await flutterTts.setSpeechRate(0.45);
       await flutterTts.speak(word);
     } catch (e) {
-      debugPrint('TTS speak failed: $e');
+      debugPrint('StudentWordPracticePage: TTS speak failed: $e');
     }
   }
 
@@ -836,14 +852,14 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     try {
       _pcmRecorder.dispose();
     } catch (e) {
-      debugPrint('Error disposing pcm recorder: $e');
+      debugPrint('StudentWordPracticePage: Error disposing pcm recorder: $e');
     }
 
     // dispose audio player
     try {
       _pcmPlayer.dispose();
     } catch (e) {
-      debugPrint('Error disposing pcm player: $e');
+      debugPrint('StudentWordPracticePage: Error disposing pcm player: $e');
     }
 
     super.dispose();
@@ -913,7 +929,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   void _handleIntroductionTts() async {
     setState(() {
       _isIntroductionTtsPlaying = true;
-      debugPrint('Starting introduction TTS... $_isIntroductionTtsPlaying');
+      debugPrint('StudentWordPracticePage: Starting introduction TTS... $_isIntroductionTtsPlaying');
     });
     
     // Recite the header to the user on load.
@@ -926,7 +942,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
         setState(() {
           _isIntroductionTtsPlaying = false;
-          debugPrint('Ending introduction TTS... $_isIntroductionTtsPlaying');
+          debugPrint('StudentWordPracticePage: Ending introduction TTS... $_isIntroductionTtsPlaying');
         });
         
       });
@@ -1064,7 +1080,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           wordLevel!,
         ),
         builder: (context, snapshot) {
-          // debugPrint('Word fetch snapshot: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
+          // debugPrint('StudentWordPracticePage: Word fetch snapshot: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
 
           if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
             try {
@@ -1149,7 +1165,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         ? 0
         : ((TIMER_DURATION_MS - _msElapsed + 999) ~/ 1000);
 
-    debugPrint("_buildRecordButton: isIntroTtsPlaying=$_isIntroductionTtsPlaying, isRecording=$_isRecording, isProcessing=$_isProcessingRecording, progress=$_progress, remaining=$remaining");
+    debugPrint("StudentWordPracticePage: _buildRecordButton: isIntroTtsPlaying=$_isIntroductionTtsPlaying, isRecording=$_isRecording, isProcessing=$_isProcessingRecording, progress=$_progress, remaining=$remaining");
     return 
       (_isIntroductionTtsPlaying == true)
         ? Container(
