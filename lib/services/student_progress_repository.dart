@@ -139,21 +139,38 @@ class StudentProgressRepository {
     });
 
     // Create the student details
-    await db.collection('student.progress').doc(uid).set({
-      'uid': uid,
-      'class': classId,
-      'averageWordAttemptScore': 0,
-      'countWordsCompleted': 0,
-      'countWordsAttempted': 0,
-      'wordAttemptIds': [],
-      'wordCompletedIds': [],
-      'wordStruggledIds': [],
-    });
+    await createInitialProgressDocument(
+      db: db,
+      uid: uid,
+      classId: classId,
+    );
     
     // Sign out the student from the secondary auth instance
     await FirebaseAuth.instanceFor(app: secondaryApp).signOut();
 
     // Remove the temporary Firebase app
     await secondaryApp.delete();
+  }
+
+  /// Create the initial student progress document in the provided Firestore
+  /// instance. This is split out so it can be tested independently of
+  /// Firebase app / auth initialization used in `registerStudentByTeacherId`.
+  static Future<void> createInitialProgressDocument({
+    required FirebaseFirestore db,
+    required String uid,
+    required String classId,
+  }) async {
+    await db.collection('student.progress').doc(uid).set({
+      'uid': uid,
+      'class': classId,
+      'averageWordAttemptScore': 0,
+      'countWordsCompleted': 0,
+      'countWordsAttempted': 0,
+      'wordAttemptIds': <String>[],
+      'wordCompletedIds': <String>[],
+      'wordStruggledIds': <String>[],
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

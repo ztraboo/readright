@@ -1,4 +1,3 @@
-import 'package:readright/models/attempt_model.dart';
 import 'package:readright/utils/app_scoring.dart';
 
 /// Model representing student progress statistics stored in Firestore.
