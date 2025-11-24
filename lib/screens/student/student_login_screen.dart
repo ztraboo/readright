@@ -8,7 +8,7 @@ import '../../services/class_repository.dart';
 import '../../services/user_repository.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_styles.dart';
-// import '../../utils/enums.dart';
+import '../../utils/enums.dart';
 import '../../utils/validators.dart';
 
 class StudentLoginPage extends StatefulWidget {
@@ -45,7 +45,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
               context.read<CurrentUserModel>().classSection = classModels.first;
             }
 
-            navigateToDashboard();
+            checkUserRoleAccess();
           });
         } else {
           debugPrint('No persisted user found.');
@@ -70,6 +70,44 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
         backgroundColor: bgColor ?? AppColors.bgPrimaryDarkGrey,
       ),
     );
+  }
+
+  void checkUserRoleAccess() {
+    // Perform an additional check to ensure that this is not a
+    // student user logged in. We only want students.
+    switch (userModel!.role) {
+      case UserRole.teacher:
+        debugPrint('Practicing words can only be accessed by students!');
+        
+        _showSnackBar(
+          message: 'Practicing words can only be accessed by students!',
+          duration: const Duration(seconds: 2),
+          bgColor: AppColors.bgPrimaryRed,
+        );
+
+        Future.delayed(const Duration(seconds: 3)).then((_) {
+          if (!mounted) return;
+          setState(() {
+            // Traverse back to the reader selection screen
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/reader-selection',
+              (Route<dynamic> route) => false,
+            );
+
+            isVerifyingExistingLoginSession = false;
+          });
+        });
+
+        break;
+      case UserRole.student:
+        navigateToDashboard();
+        break;
+    }
+
+    // Exit early to prevent navigating to the student dashboard
+    // Important for teacher role case above
+    return;
   }
 
   void navigateToDashboard() async {
