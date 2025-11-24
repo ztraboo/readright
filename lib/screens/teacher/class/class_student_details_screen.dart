@@ -1,16 +1,77 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ClassStudentDetails extends StatelessWidget {
+class ClassStudentDetails extends StatefulWidget {
   final String studentUid;
 
   const ClassStudentDetails({super.key, required this.studentUid});
 
+  @override
+  State<ClassStudentDetails> createState() => _ClassStudentDetailsState();
+}
+
+class _ClassStudentDetailsState extends State<ClassStudentDetails> {
+  // Word Progress filters
+  String _searchText = '';
+  String _selectedLevel = 'All';
+  String _selectedSort = 'A-Z';
+
+  // Persistent future
+  late Future<Map<String, dynamic>> _studentFuture;
+
+  // Sort options for dropdown
+  final List<String> sortOptions = ['A-Z', 'Z-A'];
+
+  // Custom order used to sort levels consistently
+  final List<String> customLevelOrder = [
+    'Pre-Primer',
+    'Primer',
+    'First Grade',
+    'Second Grade',
+    'Third Grade',
+    'Fourth Grade',
+    'Fifth Grade',
+  ];
+
+  // Colors for each level
+  final List<Color> levelColors = [
+    Colors.blue,
+    Colors.green,
+    Colors.orange,
+    Colors.red,
+    Colors.purple,
+    Colors.teal,
+    Colors.pink,
+  ];
+
+  // Map Color to Level
+  final Map<String, Color> _levelColorMap = {};
+
+  // Returns consistent color per level
+  Color getLevelColor(String level) {
+    if (_levelColorMap.containsKey(level)) return _levelColorMap[level]!;
+
+    // Assign next color from the list
+    final color = levelColors[_levelColorMap.length % levelColors.length];
+    _levelColorMap[level] = color;
+    return color;
+  }
+
+  // Prevents rebuild loop
+  @override
+  void initState() {
+    super.initState();
+
+    // Load student, class, and user data
+    _studentFuture = fetchStudentData();
+  }
+
+  // Fetch student progress + user info + class details
   Future<Map<String, dynamic>> fetchStudentData() async {
     // Fetch student document
     final studentDoc = await FirebaseFirestore.instance
         .collection('student.progress')
-        .where('uid', isEqualTo: studentUid)
+        .where('uid', isEqualTo: widget.studentUid)
         .limit(1)
         .get();
 
@@ -18,30 +79,29 @@ class ClassStudentDetails extends StatelessWidget {
 
     final studentData = studentDoc.docs.first.data();
 
-    // Fetch fullName from users collection
+    // Fetch fullName
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .where('id', isEqualTo: studentUid)
+        .where('id', isEqualTo: widget.studentUid)
         .limit(1)
         .get();
 
-    final fullName = userDoc.docs.isNotEmpty
-        ? userDoc.docs.first.data()['fullName'] ?? 'No Name'
-        : 'No Name';
+    final userData = userDoc.docs.isNotEmpty ? userDoc.docs.first.data() : {};
 
-    // Fetch class info
+    // Fetch class info for student
     final classDoc = await FirebaseFirestore.instance
         .collection('classes')
-        .where('studentIds', arrayContains: studentUid)
+        .where('studentIds', arrayContains: widget.studentUid)
         .limit(1)
         .get();
 
-    final classData = classDoc.docs.isNotEmpty
-        ? classDoc.docs.first.data()
-        : {};
+    final classData =
+        classDoc.docs.isNotEmpty ? classDoc.docs.first.data() : {};
 
+    // Mapping returned to the FutureBuilder
     return {
-      'fullName': fullName,
+      'fullName': userData['fullName'] ?? 'No Name',
+      'username': userData['username'] ?? 'No Username',
       'completed': studentData['completed'] ?? 0,
       'totalAttempts': studentData['totalAttempts'] ?? 0,
       'averageScore': studentData['averageScore'] ?? 0.0,
@@ -52,86 +112,370 @@ class ClassStudentDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Student Details')),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: fetchStudentData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          final data = snapshot.data ?? {};
-          final fullName = data['fullName'] ?? 'No Name';
-          final completed = data['completed'] ?? 0;
-          final totalWordsToComplete = data['totalWordsToComplete'] ?? 0;
-          final averageScore = data['averageScore'] ?? 0.0;
-          final totalAttempts = data['totalAttempts'] ?? 0;
-          final topStruggledWords = data['topStruggledWords'] ?? [];
+    // Tab Builder
+    return DefaultTabController(
+      length: 2, 
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Student Details'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.info_outline), text: 'Student Details'),
+              Tab(icon: Icon(Icons.menu_book_outlined), text: 'Word Progress'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Student Details Tab
+            FutureBuilder<Map<String, dynamic>>(
+              // Uses persistent future
+              future: _studentFuture, 
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Loading student data
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  // Firestore or parsing error
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Student Name
-                Text(
-                  fullName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                final data = snapshot.data ?? {};
+                final fullName = data['fullName'];
+                final username = data['username'];
+                final averageScore = data['averageScore'];
+                final totalAttempts = data['totalAttempts'];
+                final topStruggledWords = data['topStruggledWords'];
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Student Name
+                      Text(
+                        fullName,
+                        style: const TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Student Username
+                      const Text('Username',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text(username, style: const TextStyle(fontSize: 16)),
+                      const Divider(height: 32, thickness: 1),
+
+                      // Averages Section
+                      const Text('Averages',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Average Score: $averageScore%',
+                          style: const TextStyle(fontSize: 16)),
+                      const Divider(height: 32, thickness: 1),
+
+                      // Attempts Section
+                      const Text('Attempts',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Total Attempts: $totalAttempts',
+                          style: const TextStyle(fontSize: 16)),
+                      const Divider(height: 32, thickness: 1),
+
+                      // Top Struggled Words
+                      const Text('Top Struggled Words',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: topStruggledWords.isEmpty
+                            ? const [Text('None', style: TextStyle(fontSize: 16))]
+                            : topStruggledWords
+                                .map<Widget>((w) => Text('• $w',
+                                    style: const TextStyle(fontSize: 16)))
+                                .toList(),
+                      ),
+                      const Divider(height: 32, thickness: 1),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // Progress Section
-                Text('Words completed: $completed / $totalWordsToComplete'),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: totalWordsToComplete == 0 ? 0 : completed / totalWordsToComplete,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey[300],
-                  color: Colors.green,
-                ),
-                const Divider(height: 32, thickness: 1),
-
-                // Averages Section
-                const Text(
-                  'Averages',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text('Average Score: $averageScore%'),
-                const Divider(height: 32, thickness: 1),
-
-                // Attempts Section
-                const Text(
-                  'Attempts',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text('Total Attempts: $totalAttempts'),
-                const Divider(height: 32, thickness: 1),
-
-                // Top Struggled Words
-                const Text(
-                  'Top Struggled Words',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: topStruggledWords
-                      .map<Widget>((w) => Text('• $w'))
-                      .toList(),
-                ),
-                const Divider(height: 32, thickness: 1),
-              ],
+                );
+              },
             ),
-          );
-        },
+            // Word Progress Tab
+            FutureBuilder<Map<String, dynamic>>(
+               // Uses same persistent future
+              future: _studentFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final data = snapshot.data ?? {};
+                final completed = data['completed'];
+                final totalWordsToComplete = data['totalWordsToComplete'];
+
+                return Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Progress Section
+                      Text(
+                        'Words completed: $completed / $totalWordsToComplete',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Progress Bar
+                      LinearProgressIndicator(
+                        value: totalWordsToComplete == 0
+                            ? 0
+                            : completed / totalWordsToComplete,
+                        minHeight: 12,
+                        backgroundColor: Colors.grey[300],
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Search Field
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Search words',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchText = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Level dropdown + Sort dropdown
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('words')
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                // Build Level List
+                                List<String> levels = ['All'];
+                                if (snapshot.hasData) {
+                                  levels.addAll(snapshot.data!.docs
+                                      .map((doc) =>
+                                          (doc.data()
+                                                  as Map<String, dynamic>)['level']
+                                              .toString())
+                                      .toSet()
+                                      .toList()
+                                    ..sort((a, b) {
+                                      // Sort levels using custom order
+                                      final indexA = customLevelOrder.indexOf(a);
+                                      final indexB = customLevelOrder.indexOf(b);
+                                      return indexA.compareTo(indexB);
+                                    }));
+                                }
+
+                                if (!levels.contains(_selectedLevel)) {
+                                  _selectedLevel = 'All';
+                                }
+
+                                return DropdownButtonFormField<String>(
+                                  initialValue: _selectedLevel,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Filter by Level',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: levels
+                                      .map((level) => DropdownMenuItem(
+                                            value: level,
+                                            child: Text(level),
+                                          ))
+                                      .toList(),
+                                  onChanged: (value) {
+                                    // Update active filter
+                                    setState(() {
+                                      _selectedLevel = value ?? 'All';
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedSort,
+                              decoration: const InputDecoration(
+                                labelText: 'Sort',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: sortOptions
+                                  .map((s) =>
+                                      DropdownMenuItem(value: s, child: Text(s)))
+                                  .toList(),
+                              onChanged: (value) {
+                                // Set sort order and rebuild list
+                                setState(() {
+                                  _selectedSort = value ?? 'A-Z';
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Word List
+                      Expanded(
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('words')
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              // Loading word list
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+
+                            // Get all words
+                            List<Map<String, dynamic>> allWords =
+                                snapshot.data!.docs.map((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              data['id'] = doc.id;
+                              return data;
+                            }).toList();
+
+                            // Apply Search & Level Filter
+                            List<Map<String, dynamic>> filteredWords =
+                                allWords.where((word) {
+                              final matchesSearch = word['text']
+                                  .toString()
+                                  .toLowerCase()
+                                  .contains(_searchText.toLowerCase());
+
+                              final matchesLevel = _selectedLevel == 'All' ||
+                                  word['level'] == _selectedLevel;
+
+                              return matchesSearch && matchesLevel;
+                            }).toList();
+
+                            // Apply sorting
+                            filteredWords.sort((a, b) {
+                              final textA = a['text'].toString().toLowerCase();
+                              final textB = b['text'].toString().toLowerCase();
+                              return _selectedSort == 'A-Z'
+                                  ? textA.compareTo(textB)
+                                  : textB.compareTo(textA);
+                            });
+
+                            if (filteredWords.isEmpty) {
+                              return const Center(
+                                  child: Text('No words match your filter.'));
+                            }
+
+                            // Build list of Words
+                            return ListView.builder(
+                              itemCount: filteredWords.length,
+                              itemBuilder: (context, index) {
+                                final word = filteredWords[index];
+                                final text = word['text'];
+                                final level = word['level'];
+
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 3,
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: ExpansionTile(
+                                    tilePadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    childrenPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      text,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    // Expanded content section
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 8),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // Level Label
+                                              const Text(
+                                                'Level:',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+
+                                              // Level Badge
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: getLevelColor(level),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  level,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 12),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
