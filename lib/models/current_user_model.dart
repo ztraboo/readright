@@ -13,6 +13,10 @@ import 'package:readright/utils/enums.dart';
 class CurrentUserModel extends ChangeNotifier {
   UserModel? _user;
   UserModel? get user => _user;
+  set user(UserModel? user) {
+    _user = user;
+    notifyListeners();
+  }
 
   ClassModel? _classSection;
   set classSection(ClassModel? classModel) {
@@ -38,23 +42,19 @@ class CurrentUserModel extends ChangeNotifier {
 
   bool get isLoggedIn => _user != null;
 
-  void logIn(UserModel? user) async {
-    if (user == null) {
+  void logIn(UserModel? userModel) async {
+    if (userModel == null) {
       debugPrint('CurrentUserModel: User is null, cannot log in.');
       return;
     }
 
-    if (_user != null) {
-      debugPrint('CurrentUserModel: A user is already logged in: ${_user!.username}');
-      return;
-    }
+    _user = userModel;
 
-    debugPrint('CurrentUserModel: Logging in username ${user.username}, email ${user.email}');
-    _user = user;
+    debugPrint('CurrentUserModel: Logging in username ${_user!.username}, email ${_user!.email}');
 
     // Load class section for the logged-in user
     late final clsSection;
-    switch (_user?.role) {
+    switch (_user!.role) {
       case UserRole.teacher:
         debugPrint('CurrentUserModel: Logged in as teacher ${_user!.username}');
         clsSection = await ClassRepository().fetchClassesByTeacher(_user!.id as String);

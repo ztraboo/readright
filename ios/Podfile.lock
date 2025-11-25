@@ -1,4 +1,7 @@
 PODS:
+  - audioplayers_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - Cheetah-iOS (2.3.0)
   - cheetah_flutter (2.3.0):
     - Cheetah-iOS (~> 2.3.0)
@@ -140,6 +143,7 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
+  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - cheetah_flutter (from `.symlinks/plugins/cheetah_flutter/ios`)
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - cloud_functions (from `.symlinks/plugins/cloud_functions/ios`)
@@ -183,6 +187,8 @@ SPEC REPOS:
     - RecaptchaInterop
 
 EXTERNAL SOURCES:
+  audioplayers_darwin:
+    :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   cheetah_flutter:
     :path: ".symlinks/plugins/cheetah_flutter/ios"
   cloud_firestore:
@@ -219,6 +225,7 @@ CHECKOUT OPTIONS:
     :tag: 12.4.0
 
 SPEC CHECKSUMS:
+  audioplayers_darwin: 4f9ca89d92d3d21cec7ec580e78ca888e5fb68bd
   Cheetah-iOS: 9cec7a187cae82897a7cc8f61e52fe8b2a4bacde
   cheetah_flutter: 40217f0fc1d6147f046709d435c964988a83f7e0
   cloud_firestore: 7a6d8a533ec7418a7fe46b3a5dabf55661a5b298
