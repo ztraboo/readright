@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 
 
 class ClassStudentDetails extends StatefulWidget {
@@ -23,6 +24,9 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
 
   // Persistent future
   late Future<Map<String, dynamic>> _studentFuture;
+
+  // Per student audio playback
+  final FlutterSoundPlayer _player = FlutterSoundPlayer();
 
   // Sort options for dropdown
   final List<String> sortOptions = ['A-Z', 'Z-A'];
@@ -61,7 +65,6 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
     _levelColorMap[level] = color;
     return color;
   }
-
 
   // Populate and build data for most recent attempt for a given word
   Future<Widget> handlePlayback(String targetWord) async {
@@ -115,7 +118,18 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
             icon: const Icon(Icons.volume_up, size: 24, color: Colors.green),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             onPressed: () async {
-              await playAudio(audioPath);
+              if (audioPath != 'Audio retention is disabled') {
+                await playAudio(audioPath);
+              }
+              else {
+                ScaffoldMessenger.of(context)
+                  ..showSnackBar(
+                    const SnackBar(
+                      content: Text('Audio retention was disabled for this attempt'),
+                      duration: Duration(seconds: 2), // how long it stays visible
+                    ),
+                  );
+              }
             },
           ),
           Text(
@@ -130,13 +144,36 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
     );
   }
 
-  // Use audioplayers to play firestore audio path 
+  // Use FlutterSoundPlayer to play firestore audio path
   Future<void> playAudio (String audioPath) async {
     final ref = FirebaseStorage.instance.ref().child(audioPath);
     final url = await ref.getDownloadURL();
 
-    final player = AudioPlayer();
-    await player.play(UrlSource(url));
+    debugPrint("audioPath: $audioPath");
+    debugPrint("url: $url");
+
+    try {
+      await _player.startPlayer(
+        fromURI: url,
+        codec: Codec.aacMP4,
+        whenFinished: () {
+          debugPrint("Playback finished (AAC)");
+        },
+      );
+    } catch (e, st) {
+      debugPrint("AAC playback failed: $e\n$st -- trying WAV");
+      try {
+        await _player.startPlayer(
+          fromURI: url,
+          codec: Codec.pcm16WAV,
+          whenFinished: () {
+            debugPrint("Playback finished (WAV)");
+          },
+        );
+      } catch (e2, st2) {
+        debugPrint("WAV playback also failed: $e2\n$st2");
+      }
+    }
   }
 
   // Prevents rebuild loop
@@ -146,7 +183,17 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
 
     // Load student, class, and user data
     _studentFuture = fetchStudentData();
+
+    // Start audio player
+    _player.openPlayer();
   }
+
+  @override
+  void dispose() {
+    _player.closePlayer();
+    super.dispose();
+  }
+
 
   // Fetch student progress + user info + class details
   Future<Map<String, dynamic>> fetchStudentData() async {

@@ -57,6 +57,8 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   bool _isIntroductionTtsPlaying = false;
   Timer? _recordTimer;
   int _msElapsed = 0; // milliseconds elapsed during recording
+  bool retention = false;  // audio retention
+  String storedAudioPath = '';
 
   late final UserModel? _currentUser;
   ClassModel? _currentClassSection;
@@ -298,6 +300,21 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       deviceOS: await DeviceUtils.getOsVersion(),
     );
 
+  // Determine if audio retention is enabled by teacher
+    try {
+      final classDoc = await FirebaseFirestore.instance
+          .collection('classes')
+          .where('studentIds', arrayContains: userId)
+          .limit(1)
+          .get();
+
+      final classData =
+      classDoc.docs.isNotEmpty ? classDoc.docs.first.data() : {};
+      retention = classData['audioRetention'];
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: Error determining class: $e');
+    }
+
     // Save attempt record to Firestore.
     try {
       await AttemptRepository().upsertAttempt(attempt);
@@ -501,6 +518,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           // Prefer direct conversion from PCM -> AAC to avoid unnecessary WAV intermediate.
           await AudioConverter.convertPcmToAac(pcmPath, aacPath);
           fbStoragePath = await uploadAudioFile(aacPath);
+          storedAudioPath = fbStoragePath;
           uploadPath = aacPath;
         } catch (e, st) {
           debugPrint(
@@ -508,6 +526,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           );
           try {
             fbStoragePath = await uploadAudioFile(wavPath);
+            storedAudioPath = fbStoragePath;
             uploadPath = wavPath;
           } catch (e3, st3) {
             debugPrint('StudentWordPracticePage: Fallback upload (WAV) also failed: $e3\n$st3');
@@ -636,6 +655,33 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           'practiceWord': practiceWord,
           'wordLevel': wordLevel,
         });
+    if (!retention) {
+
+      debugPrint("audio retention is off. stored path: $storedAudioPath");
+      try {
+        // Update stored audio path to reflect deletion
+        final attemptQuery = await FirebaseFirestore.instance
+            .collection('attempts')
+            .where('audioPath', isEqualTo: storedAudioPath)
+            .limit(1)
+            .get();
+
+        if (attemptQuery.docs.isNotEmpty) {
+          final docRef = attemptQuery.docs.first.reference;
+          await docRef.update({
+            'audioPath': 'Audio retention is disabled',
+          });
+        }
+
+        // delete stored audio file after it's used
+        final ref = FirebaseStorage.instance.ref().child(storedAudioPath);
+        await ref.delete();
+        debugPrint("Deleted file at $storedAudioPath");
+
+      } catch (e) {
+        debugPrint("Failed to delete file: $e");
+      }
+    }
   }
 
   Future<void> playRecording() async {
