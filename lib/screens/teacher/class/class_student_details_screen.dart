@@ -6,6 +6,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 
+import 'package:readright/utils/app_colors.dart';
+
 
 class ClassStudentDetails extends StatefulWidget {
   final String studentUid;
@@ -114,24 +116,38 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
               fontSize: 16,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.volume_up, size: 24, color: Colors.green),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            onPressed: () async {
-              if (audioPath != 'Audio retention is disabled') {
-                await playAudio(audioPath);
-              }
-              else {
-                ScaffoldMessenger.of(context)
-                  ..showSnackBar(
-                    const SnackBar(
-                      content: Text('Audio retention was disabled for this attempt'),
-                      duration: Duration(seconds: 2), // how long it stays visible
-                    ),
-                  );
-              }
-            },
-          ),
+          (audioPath == null)
+              ? IconButton(
+                  icon: const Icon(Icons.volume_up, size: 24, color: AppColors.bgPrimaryGray),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  onPressed: () async {
+                    ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                        const SnackBar(
+                          content: Text('No audio attempt found for this word'),
+                          duration: Duration(seconds: 2), // how long it stays visible
+                        ),
+                      );
+                  },
+                )
+              : IconButton(
+                icon: const Icon(Icons.volume_up, size: 24, color: AppColors.buttonSecondaryGreen),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                onPressed: () async {
+                  if (audioPath != 'Audio retention is disabled') {
+                    await playAudio(audioPath);
+                  }
+                  else {
+                    ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                        const SnackBar(
+                          content: Text('Audio retention was disabled for this attempt'),
+                          duration: Duration(seconds: 2), // how long it stays visible
+                        ),
+                      );
+                  }
+                },
+              ),
           Text(
               attemptData['score'] != null
                   ? 'Score = ${(attemptData['score'] as num).toStringAsFixed(2)}'
