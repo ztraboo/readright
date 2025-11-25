@@ -1,9 +1,13 @@
 // import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import 'package:readright/models/word_model.dart';
 
@@ -19,6 +23,7 @@ import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import '../../utils/app_colors.dart';
+import '../../utils/app_constants.dart';
 import '../../utils/app_scoring.dart';
 import '../../utils/app_styles.dart';
 import 'package:readright/utils/enums.dart';    
@@ -45,6 +50,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   double _passingThresholdStars = 0.0;
   Uint8List? _pcmBytes;
   AssessmentResult? _attemptResult;
+
+  bool _isIntroductionTtsPlaying = false;
+  final FlutterTts flutterTts = FlutterTts();
 
   @override
   void initState() {
@@ -100,8 +108,13 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         }
       });
 
-    }); 
+      // Handle the header TTS.
+      // We're only calling this here to ensure it runs after initial state setup.
+      // This will not be called again if the user traverse from
+      // the student feedback screen back to this practice screen.
+      _handleIntroductionTts();
 
+    }); 
   } 
 
   // Normalize raw score to 0..5 double stars (in 0.5 increments) based on rawScore input of 0..1 or 0..100 percentage value.
@@ -155,6 +168,124 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     } catch (e, st) {
       debugPrint('StudentWordFeedbackPage: Error playing PCM via PcmPlayer: $e\n$st');
     }
+  }
+
+  Future<void> _handleTts({required String assetPath}) async {
+      // Try a small pre-check to ensure the asset exists in the bundle before
+    // asking the native audio plugin to play it. This avoids opaque native
+    // errors when the asset is missing or wasn't bundled into the app.
+    // Asset keys must not start with "./"; use the asset path as declared in
+    // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
+    // rootBundle.load(...) to fail with "Unable to load asset".
+
+    ByteData assetData;
+    try {
+      assetData = await rootBundle.load(assetPath);
+    } catch (assetErr) {
+      debugPrint('StudentWordPracticePage: TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
+      return;
+    }
+
+    // Play using flutter_sound's player (plays from in-memory buffer).
+    final player = FlutterSoundPlayer();
+    final completer = Completer<void>();
+    try {
+        try {
+          await player.openPlayer();
+        } catch (openErr) {
+          debugPrint('StudentWordPracticePage: flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
+          return;
+        }
+
+        try {
+          await player.startPlayer(
+            fromDataBuffer: assetData.buffer.asUint8List(),
+            codec: Codec.mp3,
+            whenFinished: () {
+            if (!completer.isCompleted) completer.complete();
+            },
+          );
+        } catch (startErr) {
+          debugPrint('StudentWordPracticePage: flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
+          return;
+        }
+
+        // Wait until playback completes (whenFinished completes the completer).
+        await completer.future;
+      } catch (playErr) {
+        debugPrint('StudentWordPracticePage: Asset playback error: $playErr, falling back to TTS.');
+        return;
+      } finally {
+        // Best-effort cleanup. Ignore individual errors but log them.
+        try {
+          await player.stopPlayer();
+        } catch (stopErr) {
+          debugPrint('StudentWordPracticePage: Error stopping flutter_sound player: $stopErr');
+        }
+        try {
+          await player.closePlayer();
+        } catch (closeErr) {
+          debugPrint('Error closing flutter_sound audio session: $closeErr');
+        }
+      }
+  }
+
+  Future<void> _speakTts(String word) async {
+    try {
+      await flutterTts.setLanguage('en-US');
+      await flutterTts.setPitch(1.0);
+      await flutterTts.setSpeechRate(0.45);
+      await flutterTts.speak(word);
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: TTS speak failed: $e');
+    }
+  }
+
+  void _handleIntroductionTts() async {
+    setState(() {
+      _isIntroductionTtsPlaying = true;
+      debugPrint('StudentWordFeedbackPage: Starting introduction TTS... $_isIntroductionTtsPlaying');
+    });
+    
+    // Recite the header to the user on load.
+    Future.microtask(() async {
+      // Ensure the prompt audio plays first, then the word audio.
+      String assetPathScore = AppConstants.assetPathPhrases;
+
+      if (_currentScore >= 0.0 && _currentScore < 2.0) {
+        assetPathScore += 'oh_no_lets_try_again.mp3';
+      } else if (_currentScore >= 2.0 && _currentScore < 3.5) {
+        assetPathScore += 'not_bad_keep_practicing.mp3';
+      } else if (_currentScore >= 3.5 && _currentScore < 4.0) {
+        assetPathScore += 'good_work_you_passed.mp3';
+      } else if (_currentScore >= 4.0 && _currentScore < 5.0) {
+        assetPathScore += 'great_job.mp3';
+      } else if (_currentScore >= 5.0) {
+        assetPathScore += 'excellent_perfect_pronunciation.mp3';
+      } else {
+        assetPathScore += 'let_us_try_again.mp3';
+      }
+      
+      // Play the score message, then "for the word", then the word itself.
+      await _handleTts(assetPath: assetPathScore);
+      await _handleTts(assetPath: '${AppConstants.assetPathPhrases}for_the_word.mp3');
+      await _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
+
+      // Provide additional guidance based on score (e.g. Next or Retry to continue).
+      if (_currentScore >= _passingThresholdStars) {
+        // Positive reinforcement for passing score.
+        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}click_next_to_continue.mp3');
+      } else {
+        // Encouragement for low score.
+        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}click_retry_to_record_again.mp3');
+      }
+
+      setState(() {
+        _isIntroductionTtsPlaying = false;
+        debugPrint('StudentWordFeedbackPage: Ending introduction TTS... $_isIntroductionTtsPlaying');
+      });
+      
+    });
   }
 
   @override
@@ -405,7 +536,22 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   }
 
   Widget _buildReplayButton() {
-    return GestureDetector(
+    return (_isIntroductionTtsPlaying == true)
+      ? Container(
+          height: 44,
+          width: 136,
+          decoration: BoxDecoration(
+            color: AppColors.bgPrimaryGray,
+            borderRadius: BorderRadius.circular(1000),
+          ),
+          child: const Center(
+            child: Text(
+              'PLAYBACK',
+              style: AppStyles.buttonText,
+            ),
+          ),
+        )
+      : GestureDetector(
       onTap: _handleReplay,
       child: Container(
         height: 44,
@@ -449,7 +595,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   // }
 
   Widget _buildRetryButton() {
-    return (_currentScore >= _passingThresholdStars)
+    return (_isIntroductionTtsPlaying == true) || (_currentScore >= _passingThresholdStars)
       ? Container(
           height: 44,
           width: 136,
@@ -484,7 +630,22 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   }
 
   Widget _buildDashboardNextButton() {
-    return GestureDetector(
+    return (_isIntroductionTtsPlaying == true)
+      ? Container(
+          height: 44,
+          width: 160,
+          decoration: BoxDecoration(
+            color: AppColors.bgPrimaryGray,
+            borderRadius: BorderRadius.circular(1000),
+          ),
+          child: const Center(
+            child: Text(
+              'NEXT',
+              style: AppStyles.buttonText,
+            ),
+          ),
+        )
+      : GestureDetector(
       onTap: () async {
         // Fetch the next word for the user at the current word level.
         // TODO: Need to put this in the init() method and store 

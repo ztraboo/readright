@@ -34,6 +34,7 @@ import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_styles.dart';
 import 'package:readright/utils/device_utility.dart';
+import 'package:readright/utils/app_constants.dart';    
 import 'package:readright/utils/enums.dart';    
 // Audio converter helpers centralized in audio utilities
 import 'package:readright/audio/audio_converter.dart';
@@ -649,15 +650,15 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     );
   }
 
-  Future<void> _handleLetsPronouceWordSentence() async {
-      // Try a small pre-check to ensure the asset exists in the bundle before
+  // Handle TTS playback from asset file.
+  Future<void> _handleTts({required String assetPath}) async {
+    // Try a small pre-check to ensure the asset exists in the bundle before
     // asking the native audio plugin to play it. This avoids opaque native
     // errors when the asset is missing or wasn't bundled into the app.
     // Asset keys must not start with "./"; use the asset path as declared in
     // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
     // rootBundle.load(...) to fail with "Unable to load asset".
 
-    final assetPath = 'assets/audio/phrases/lets_pronounce_the_word.mp3';
     ByteData assetData;
     try {
       assetData = await rootBundle.load(assetPath);
@@ -706,138 +707,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           await player.closePlayer();
         } catch (closeErr) {
           debugPrint('Error closing flutter_sound audio session: $closeErr');
-        }
-      }
-  }
-
-  Future<void> _handleTtsWord(String rawWord) async {
-    // Try a small pre-check to ensure the asset exists in the bundle before
-    // asking the native audio plugin to play it. This avoids opaque native
-    // errors when the asset is missing or wasn't bundled into the app.
-    // Asset keys must not start with "./"; use the asset path as declared in
-    // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
-    // rootBundle.load(...) to fail with "Unable to load asset".
-
-    final word = rawWord.trim().toLowerCase(); // normalize to match filenames
-    final assetPath = 'assets/audio/words/$word.mp3';
-    ByteData assetData;
-    try {
-      assetData = await rootBundle.load(assetPath);
-    } catch (assetErr) {
-      debugPrint('StudentWordPracticePage: TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
-      await _speakTts(word);
-      return;
-    }
-
-    // Play using flutter_sound's player (plays from in-memory buffer).
-    final player = FlutterSoundPlayer();
-    final completer = Completer<void>();
-    try {
-        try {
-          await player.openPlayer();
-        } catch (openErr) {
-          debugPrint('StudentWordPracticePage: flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
-          await _speakTts(word);
-          return;
-        }
-
-        try {
-          await player.startPlayer(
-            fromDataBuffer: assetData.buffer.asUint8List(),
-            codec: Codec.mp3,
-            whenFinished: () {
-            if (!completer.isCompleted) completer.complete();
-            },
-          );
-        } catch (startErr) {
-          debugPrint('StudentWordPracticePage: flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
-          await _speakTts(word);
-          return;
-        }
-
-        // Wait until playback completes (whenFinished completes the completer).
-        await completer.future;
-      } catch (playErr) {
-        debugPrint('StudentWordPracticePage: Asset playback error: $playErr, falling back to TTS.');
-        await _speakTts(word);
-        return;
-      } finally {
-        // Best-effort cleanup. Ignore individual errors but log them.
-        try {
-          await player.stopPlayer();
-        } catch (stopErr) {
-          debugPrint('StudentWordPracticePage: Error stopping flutter_sound player: $stopErr');
-        }
-        try {
-          await player.closePlayer();
-        } catch (closeErr) {
-          debugPrint('StudentWordPracticePage: Error closing flutter_sound audio session: $closeErr');
-        }
-      }
-  }
-
-  Future<void> _handleTtsWordSentence(String rawWord, String practiceSentenceId) async {
-    // Try a small pre-check to ensure the asset exists in the bundle before
-    // asking the native audio plugin to play it. This avoids opaque native
-    // errors when the asset is missing or wasn't bundled into the app.
-    // Asset keys must not start with "./"; use the asset path as declared in
-    // pubspec.yaml (e.g. 'assets/audio/...'). Using a leading './' will cause
-    // rootBundle.load(...) to fail with "Unable to load asset".
-
-    final word = rawWord.trim().toLowerCase(); // normalize to match filenames
-    final assetPath = 'assets/audio/sentences/${word}_${practiceSentenceId}.mp3';
-    ByteData assetData;
-    try {
-      assetData = await rootBundle.load(assetPath);
-    } catch (assetErr) {
-      debugPrint('StudentWordPracticePage: TTS asset not found: $assetPath, falling back to TTS. Error: $assetErr');
-      await _speakTts(word);
-      return;
-    }
-
-    // Play using flutter_sound's player (plays from in-memory buffer).
-    final player = FlutterSoundPlayer();
-    final completer = Completer<void>();
-    try {
-        try {
-          await player.openPlayer();
-        } catch (openErr) {
-          debugPrint('StudentWordPracticePage: flutter_sound openPlayer failed: $openErr. Falling back to TTS.');
-          await _speakTts(word);
-          return;
-        }
-
-        try {
-          await player.startPlayer(
-            fromDataBuffer: assetData.buffer.asUint8List(),
-            codec: Codec.mp3,
-            whenFinished: () {
-            if (!completer.isCompleted) completer.complete();
-            },
-          );
-        } catch (startErr) {
-          debugPrint('StudentWordPracticePage: flutter_sound startPlayer failed for $assetPath: $startErr. Falling back to TTS.');
-          await _speakTts(word);
-          return;
-        }
-
-        // Wait until playback completes (whenFinished completes the completer).
-        await completer.future;
-      } catch (playErr) {
-        debugPrint('StudentWordPracticePage: Asset playback error: $playErr, falling back to TTS.');
-        await _speakTts(word);
-        return;
-      } finally {
-        // Best-effort cleanup. Ignore individual errors but log them.
-        try {
-          await player.stopPlayer();
-        } catch (stopErr) {
-          debugPrint('StudentWordPracticePage: Error stopping flutter_sound player: $stopErr');
-        }
-        try {
-          await player.closePlayer();
-        } catch (closeErr) {
-          debugPrint('StudentWordPracticePage: Error closing flutter_sound audio session: $closeErr');
         }
       }
   }
@@ -953,9 +822,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     if (!_isRecording && !_isProcessingRecording) {
       Future.microtask(() async {
         // Ensure the prompt audio plays first, then the word audio.
-        await _handleLetsPronouceWordSentence();
-        await _handleTtsWord('${practiceWord?.text}');
-        await _handleTtsWordSentence('${practiceWord?.text}', practiceSentenceId!);
+        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}lets_pronounce_the_word.mp3');
+        await _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
+        await _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3');
 
         setState(() {
           _isIntroductionTtsPlaying = false;
@@ -1344,7 +1213,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       tooltip: 'Play Practice Word',
       onPressed: () {
         (!_isRecording && !_isProcessingRecording)
-          ? _handleTtsWord('${practiceWord?.text}')
+          ? _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3')
           : null;
       },
     );
@@ -1361,7 +1230,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       tooltip: 'Play Practice Word Sentence',
       onPressed: () {
         (!_isRecording && !_isProcessingRecording)
-            ? _handleTtsWordSentence('${practiceWord?.text}', '$practiceSentenceId')
+            ? _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3')
             : null;
       },
     );
