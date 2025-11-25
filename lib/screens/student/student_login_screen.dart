@@ -130,10 +130,9 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
         await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
 
-        Navigator.pushNamedAndRemoveUntil(
+        Navigator.pushNamed(
           context,
           '/student-word-dashboard',
-          (Route<dynamic> route) => false,
         );
     } 
   }
@@ -166,10 +165,9 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
 
     // Navigate to the passcode verification screen and remove all previous routes
     // to prevent going back to the login screen.
-    Navigator.pushNamedAndRemoveUntil(
+    Navigator.pushNamed(
       context,
       '/student-passcode-verification',
-      (Route<dynamic> route) => false,
       arguments: {
         'username': username,
         'email': userModelExists.email,
