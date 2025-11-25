@@ -22,7 +22,20 @@ Milestone 2 builds on this foundation to deliver a full end-to-end practice pipe
 The sections below retain the original Milestone 1 descriptions and call out **Milestone 2 updates** where functionality has changed or been extended.
 
 ## Milestone 3 — Audio Retention + Analytics + Hardening (Overview)
-TODO
+teacher_dashboard_screen.dart:
+  - Enhanced Class Details and Progress tracking to have class average, top struggled words, 
+  - Enable Audio Retention Option moved to the class level and can now be toggeled
+  - Teacher Word Dashboard access has been moved to the Class Details tab
+  - Export Class Progess to .csv has been added to Class Details tab and is fully functional
+class_student_details_screen.dart:
+  - Enhanced to include Student Details & Word Progress tabs
+  - Name, Username, Total Average, Top Struggled Word shown on Student Detail Tab
+  - List of words that have expandable cards contain word progress, as well as audio playback of the latest attempts
+  - Word Progress contains Search, Filter, and Sort
+teacher_word_dashboard_screen.dart:
+  - UI/UX Enhanced
+  - Contains Search, Filter, and Sort
+  - List of words that have expandable cards contain word level and word sentence examples
 
 ---
 
