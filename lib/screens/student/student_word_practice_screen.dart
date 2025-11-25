@@ -52,6 +52,7 @@ class StudentWordPracticePage extends StatefulWidget {
 class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     with WidgetsBindingObserver {
   double _progress = 0.0;
+  PermissionStatus _microphonePermissionStatus = PermissionStatus.denied;
   bool _isProcessingRecording = false;
   bool _isRecording = false;
   bool _isIntroductionTtsPlaying = false;
@@ -136,37 +137,64 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         }
       });
 
+      if (practiceWord != null) {
+          // Fetch a new sentence for the practice word.
+          fetchNewWordSentence();
+
+          // Handle the header TTS.
+          // We're only calling this here to ensure it runs after initial state setup.
+          // This will not be called again if the user traverse from
+          // the student feedback screen back to this practice screen.
+          _handleIntroductionTts();
+
+          // Initialize the PCM player now. The recorder will manage microphone
+          // permission and initialize itself on start().
+          _initPCMPlayer();
+
+          // Initialize the PCM recorder if not already initialized
+          _initPCMRecorder();
+
+          // Start listening to the assessor stream after recorder is started.
+          // This avoids an issue with the UI stop counter not updating if the
+          // recorder is started/stopped multiple times.
+
+          // Execute this line only if there is no network
+          if (online == false){
+            _startSTTAccessor();
+          }
+      }
+
     });
 
-    if (practiceWord != null) {
-      // Initialize the PCM player now. The recorder will manage microphone
-      // permission and initialize itself on start().
-      _initPCMPlayer();
+    // if (practiceWord != null) {
+    // Initialize the PCM player now. The recorder will manage microphone
+    // permission and initialize itself on start().
+    // _initPCMPlayer();
 
-      // Initialize the PCM recorder if not already initialized
-      _initPCMRecorder();
+    // Initialize the PCM recorder if not already initialized
+    // _initPCMRecorder();
 
-      // Check to see if the recorder has permissions for the microphone.
-      checkRecorderPermission();
+    // Check to see if the recorder has permissions for the microphone.
+    // checkRecorderPermission();
 
       // Start listening to the assessor stream after recorder is started.
       // This avoids an issue with the UI stop counter not updating if the
       // recorder is started/stopped multiple times.
 
       // Execute this line only if there is no network
-      if (online == false){
-        _startSTTAccessor();
-      }
-    }
+      // if (online == false){
+      //   _startSTTAccessor();
+      // }
+    // }
 
-    // Fetch a new sentence for the practice word.
-    fetchNewWordSentence();
+    // // Fetch a new sentence for the practice word.
+    // fetchNewWordSentence();
 
-    // Handle the header TTS.
-    // We're only calling this here to ensure it runs after initial state setup.
-    // This will not be called again if the user traverse from
-    // the student feedback screen back to this practice screen.
-    _handleIntroductionTts();
+    // // Handle the header TTS.
+    // // We're only calling this here to ensure it runs after initial state setup.
+    // // This will not be called again if the user traverse from
+    // // the student feedback screen back to this practice screen.
+    // _handleIntroductionTts();
   }
 
   // Initialize the PCM player now. The recorder will manage microphone permission.
@@ -207,11 +235,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   // Open up app settings if permanently denied to enable Privacy settings for microphone for this app.
   Future<void> checkRecorderPermission() async {
     try {
-      final perm = await _pcmRecorder.checkAndRequestPermission();
+      _microphonePermissionStatus = await _pcmRecorder.checkAndRequestPermission();
       // checkAndRequestPermission now handles UI for permanentlyDenied (dialogs/openSettings).
       // Here we only abort if permission was not granted.
-      debugPrint('StudentWordPracticePage: Microphone permission status: $perm');
-      if (perm == PermissionStatus.permanentlyDenied) {
+      debugPrint('StudentWordPracticePage: Microphone permission status: $_microphonePermissionStatus');
+      if (_microphonePermissionStatus == PermissionStatus.permanentlyDenied) {
         // Build a show dialog to inform user to open settings if they
         // clicked "Don't Allow" on initial prompt.
 
@@ -404,29 +432,24 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     if (_isProcessingRecording) return;
 
     if (!_isRecording) {
+
+      // Before starting a recording, explicitly check/request microphone permission
+      // try {
+      _microphonePermissionStatus = await _pcmRecorder.getPermissionStatus();
+      if (_microphonePermissionStatus != PermissionStatus.granted) {
+        await checkRecorderPermission();
+        return;
+      }
+
       debugPrint('StudentWordPracticePage: Starting recording...');
 
       if (!mounted) return;
       setState(() {
+        // _isProcessingRecording = true;
         _isRecording = true;
         _progress = 0.0;
         _msElapsed = 0;
       });
-
-      // Before starting a recording, explicitly check/request microphone permission
-      // try {
-      final perm = await _pcmRecorder.getPermissionStatus();
-      if (perm != PermissionStatus.granted) {
-        await checkRecorderPermission();
-
-        // Make sure the states for processing and recording are set
-        setState(() {
-          _isProcessingRecording = true;
-          _isRecording = false;
-        });
-
-        return;
-      }
 
       // Permission granted: start recording and reset progress
       try {
