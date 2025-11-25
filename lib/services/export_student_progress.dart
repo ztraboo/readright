@@ -4,6 +4,9 @@ import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:readright/services/word_respository.dart';
+import 'package:readright/utils/app_scoring.dart';
+
 Future<void> exportStudentProgress({required String teacherUid}) async {
   if (teacherUid.isEmpty) return;
 
@@ -47,7 +50,7 @@ Future<void> exportStudentProgress({required String teacherUid}) async {
     if (progressSnapshot.docs.isEmpty) continue;
 
     final progressData = progressSnapshot.docs.first.data();
-    final attemptsList = List<String>.from(progressData['attempts'] ?? []);
+    final attemptsList = List<String>.from(progressData['wordAttemptIds'] ?? []);
 
     for (var attemptId in attemptsList) {
       final attemptDoc = await FirebaseFirestore.instance
@@ -58,19 +61,19 @@ Future<void> exportStudentProgress({required String teacherUid}) async {
       if (!attemptDoc.exists) continue;
 
       final attemptData = attemptDoc.data()!;
-      final word = attemptData['wordId'] ?? '';
+      final word = await WordRepository().fetchWordById(attemptData['wordId']);
       final transcript = attemptData['speechToTextTranscript'] ?? '';
       final score = (attemptData['score'] ?? 0).toDouble();
-      final correct = score > 0.7 ? 'Yes' : 'No';
+      final correct = score > AppScoring.passingThreshold ? 'Yes' : 'No';
       final date = attemptData['createdAt'] != null
           ? (attemptData['createdAt'] as Timestamp).toDate().toString()
           : '';
 
       rows.add([
         uidToName[uid] ?? 'Unknown',
-        word,
+        word?.text,
         transcript,
-        score,
+        double.parse((score * 100).toStringAsFixed(2)),
         correct,
         date,
       ]);

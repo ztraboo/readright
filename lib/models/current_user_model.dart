@@ -80,7 +80,7 @@ class CurrentUserModel extends ChangeNotifier {
         _classSection = clsSection.first;
 
         wordAttempts = await AttemptRepository().fetchAttemptsByUser(
-          _user!.id as String,
+          _user?.id as String,
           classId: _classSection?.id ?? 'Unknown',
         );
         break;
