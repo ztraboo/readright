@@ -11,6 +11,7 @@ import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
+import 'package:readright/utils/app_scoring.dart';
 import 'package:readright/utils/app_styles.dart';
 import 'package:readright/utils/enums.dart';
 
@@ -86,7 +87,7 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
       int completed = 0;
       for (final word in wordIds) {
         final hasSuccessfulAttempt = _userAttempts.any(
-          (a) => a.wordId == word && (a.score ?? 0) > 0.00,
+          (a) => a.wordId == word && (a.score ?? 0) > AppScoring.passingThreshold,
         );
         if (hasSuccessfulAttempt) completed++;
       }
@@ -94,35 +95,6 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     } catch (e) {
       debugPrint('Error fetching words for level ${wordLevel.name}: $e');
       return 0;
-    }
-  }
-
-  // Fetch the practice WordModel for the user in the given word level.
-  Future<WordModel?> _fetchUsersPracticeWord(WordLevel wordLevel) async {
-    // Compute the practice word for the user to practice in the given word level.
-    // This is a placeholder implementation; replace with actual logic.
-    try {
-      final words = await WordRepository().fetchLevelWords(wordLevel);
-      final wordIds = words.map((w) => w.id ?? '').toList();
-      if (wordIds.isEmpty) return null;
-      if (_userAttempts.isEmpty) return await WordRepository().fetchWordById(wordIds.first);
-
-      // Find the first word that the user has not yet attempted.
-      final practiceWordId = wordIds.firstWhere(
-        (word) {
-          final attemptsForWord = _userAttempts.where((a) => a.wordId == word);
-          // Select the word if there are no attempts yet.
-          return attemptsForWord.isEmpty;
-        },
-        orElse: () => wordIds.first,
-      );
-      final practiceWord = await WordRepository().fetchWordById(practiceWordId);
-
-      debugPrint('Selected practice word for level ${wordLevel.name}: ${practiceWord?.text}');
-      return practiceWord;
-    } catch (e) {
-      debugPrint('Error fetching practice word for level ${wordLevel.name}: $e');
-      return null;
     }
   }
 
@@ -268,7 +240,7 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
           context,
           '/student-word-practice',
           arguments: {
-            'practiceWord': await _fetchUsersPracticeWord(wordLevelFromString(title)),
+            'practiceWord': await context.read<CurrentUserModel>().fetchUsersNextPracticeWord(wordLevelFromString(title)),
             'wordLevel': wordLevelFromString(title),
           }, 
         );

@@ -8,6 +8,7 @@ import '../../models/class_model.dart';
 import '../../models/user_model.dart';
 import '../../services/export_student_progress.dart';
 import '../../services/student_progress_repository.dart';
+import '../../services/word_respository.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -128,9 +129,22 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
     if (classSnapshot.docs.isEmpty) return {};
 
     final data = classSnapshot.docs.first.data();
+
+    // Locate the word text from struggled word document IDs
+    final List<dynamic> wordStruggledIds = List.from(data['wordStruggledIds'] ?? []);
+    for (int i = 0; i < wordStruggledIds.length; i++) {
+      final wordId = wordStruggledIds[i];
+      final wordModel = await WordRepository().fetchWordById(wordId);
+      if (wordModel != null) {
+        wordStruggledIds[i] = wordModel.text;
+      } else {
+        wordStruggledIds[i] = '';
+      }
+    }
+
     return {
-      'classAverage': data['classAverage'] ?? 0.0,
-      'topStruggledWords': List<String>.from(data['topStruggledWords'] ?? []),
+      'averageClassWordAttemptScore': double.parse(((data['averageClassWordAttemptScore'] ?? 0.0) * 100).toStringAsFixed(2)),
+      'topStruggledWords': wordStruggledIds,
       'classCode': data['classCode'] ?? '',
       'totalWordsToComplete': data['totalWordsToComplete'] ?? 0,
       'teacherId': data['teacherId'] ?? '',
@@ -283,7 +297,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        Text('${classData['classAverage'] ?? 0}%'),
+                        Text('${classData['averageClassWordAttemptScore'] ?? 0}%'),
                         const Divider(height: 32, thickness: 1),
 
                         // Top Struggled Words

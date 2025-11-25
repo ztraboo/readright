@@ -171,45 +171,6 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
-  Future<WordModel?> _fetchUsersNextWord(WordLevel wordLevel) async {
-    // Compute the next word for the user to practice in the given word level.
-    // This implementation awaits the user's attempts so the local variable is initialized
-    // before being used, and avoids unnecessary null-coalescing on word text.
-
-    try {
-      // Fetch attempts for the current user from the database (await so userAttempts is initialized).
-      final List<AttemptModel> userAttempts = await AttemptRepository().fetchAttemptsByUser(
-        _currentUser?.id ?? '',
-        classId: _currentClassSection?.id ?? 'Unknown',
-      );
-      debugPrint('StudentWordFeedbackPage: Fetched ${userAttempts.length} attempts for user ${_currentUser?.id}');
-
-      final words = await WordRepository().fetchLevelWords(wordLevel);
-      // Map to word text; use whereType to filter out any nulls if text is nullable.
-      final wordIds = words.map((w) => w.id).whereType<String>().toList();
-
-      if (wordIds.isEmpty) return null;
-      if (userAttempts.isEmpty) return await WordRepository().fetchWordById(wordIds.first);
-
-      // Find the first word that the user has not yet attempted.
-      final practiceWordId = wordIds.firstWhere(
-        (word) {
-          final attemptsForWord = userAttempts.where((a) => a.wordId == word);
-          // Select the word if there are no attempts yet.
-          return attemptsForWord.isEmpty;
-        },
-        orElse: () => wordIds.first,
-      );
-      final practiceWord = await WordRepository().fetchWordById(practiceWordId);
-
-      debugPrint('StudentWordFeedbackPage: Selected next word for level ${wordLevel.name}: ${practiceWord?.text}');
-      return practiceWord;
-    } catch (e) {
-      debugPrint('StudentWordFeedbackPage: Error fetching next word for level ${wordLevel.name}: $e');
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -528,7 +489,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         // Fetch the next word for the user at the current word level.
         // TODO: Need to put this in the init() method and store 
         // state rather than calling it here potentially on a tap.
-        (_fetchUsersNextWord(wordLevel as WordLevel)).then((word) {
+        (context.read<CurrentUserModel>().fetchUsersNextPracticeWord(wordLevel as WordLevel)).then((word) {
           debugPrint('StudentWordFeedbackPage: Next word for user ${_currentUser?.id} at level ${wordLevel?.name} is: ${word?.text}');
           if (word != null) {
             Navigator.pushNamed(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'package:readright/models/word_model.dart';
 import 'package:readright/services/word_respository.dart';
 
 class ClassStudentDetails extends StatefulWidget {
