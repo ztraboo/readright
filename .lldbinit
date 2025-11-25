@@ -1,0 +1,10 @@
+# chmod +x scripts/install_lldbinit.sh
+# Install by running `bash scripts/install_lldbinit.sh` from readright project root.
+
+# Do not stop the debugger when the OS sends SIGSTOP while app backgrounds
+process handle SIGSTOP --stop false --pass true --notify false
+
+# Also ignore the TTY stop signals that can appear when switching context
+process handle SIGTSTP --stop false --pass true --notify false
+process handle SIGTTIN --stop false --pass true --notify false
+process handle SIGTTOU --stop false --pass true --notify false
