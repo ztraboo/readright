@@ -169,6 +169,22 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
     debugPrint("url: $url");
 
     try {
+      // TODO: This seemed to not work at max volume = 1.0 like we do with the
+      // PCM amplification in the 'lib/audio/stream/pcm_player.dart' file.
+      // Consider in the future to convert AAC to PCM for amplification if needed.
+      //
+      // Try to amplify playback (may be platform-limited). If setVolume isn't supported it will be ignored.
+      try {
+        // Ensure volume is within the allowed range [0.0, 1.0].
+        // If you intended to amplify above 1.0, clamp to the max supported value.
+        final double desiredVolume = 2.0;
+        final double safeVolume = (desiredVolume.clamp(0.0, 1.0)) as double;
+        await _player.setVolume(safeVolume);
+        debugPrint('ClassStudentDetails: Requested amplified volume: $desiredVolume, applied: $safeVolume');
+      } catch (volErr) {
+        debugPrint('ClassStudentDetails: Could not set FlutterSoundPlayer volume: $volErr');
+      }
+
       await _player.startPlayer(
         fromURI: url,
         codec: Codec.aacMP4,
