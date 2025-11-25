@@ -48,6 +48,7 @@ dependencies:
   permission_handler: ^12.0.1
   firebase_storage: ^13.0.3
   flutter_launcher_icons: ^0.14.4
+  audioplayers: ^6.0.0
   # Ignored for FFmpeg conversion due to performance concerns with builds and runtime.
   # ffmpeg_kit_flutter_new_audio: ^2.0.0
 
