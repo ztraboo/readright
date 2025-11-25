@@ -22,6 +22,10 @@ Milestone 2 builds on this foundation to deliver a full end-to-end practice pipe
 The sections below retain the original Milestone 1 descriptions and call out **Milestone 2 updates** where functionality has changed or been extended.
 
 ## Milestone 3 — Audio Retention + Analytics + Hardening (Overview)
+
+**.github/workflows/flutter-ci.yml**
+  - Github Workflow Action (Continuous Integration/Delivery) is set up to run test suite (e.g. unit, widget, integration) and build out artifacts like Android APK files when committing code to the main branch.
+  
 **teacher_dashboard_screen.dart**
   - Enhanced Class Details and Progress tracking to have class average, top struggled words, 
   - Enable Audio Retention Option moved to the class level and can now be toggeled
@@ -40,6 +44,34 @@ The sections below retain the original Milestone 1 descriptions and call out **M
   - UI/UX Enhanced
   - Contains Search, Filter, and Sort
   - List of words that have expandable cards contain word level and word sentence examples
+
+**models/class_model.dart**
+  - Handles storing data from the `classes` Firestore collection. 
+
+**models/student_progress_model.dart**
+  - Handles storing data from the `student.progress` Firestore collection.
+
+**services/class_repository.dart**
+  - Handles CRUD operations from the `classes` Firestore collection. 
+
+**services/student_progress_repository.dart**
+  - Handles CRUD operations from the `student.progress` Firestore collection.
+
+**screens/student/student_login_screen.dart**
+  - Locked down the student flow by rejecting roles that are not student. This included roles like teacher. This was important to not clutter the word practice average for the class.
+
+**screens/student/word_practice_screen.dart**
+  - The RECORD button is disabled while the introduction audio Tts is being played to the student. This prevents cheating should the microphone picking up the audio recording playback after the RECORD button is pressed.
+  - After clicking RECORD, the audio playback for the word and word sentence are disabled to prevent cheating should the microphone pickup that audio playback.
+  - The RECORD timer is set to 3 seconds (previous 7 seconds)
+  - Word practice attempts are saved in the `student.progress` table for use by the teacher.
+
+**screens/student/word_feedback_screen.dart**
+  - Audio feedback is played back to the student at start letting them know how they did. Directions on what to do next are presented through audio feedback based on score.
+  - The REPLAY, RETRY, and NEXT buttons are disabled while the Tts feedback on page load is being played. This is to avoid an issue with state crashing due to destroy() method.
+  - When the student passes the score threshold they are not presented with a RETRY option.
+  - The next button is always available should the student want to go on to the next practice word. This prevents the learner from being locked down on a given word should it be hard to pronounce. Difficult words are saved in the database for later retrieval/retry again.
+
 ## 🚀 Application Flow
 > Please refer to the [Mobile Screens](#mobile-screens) section below to see the actual interface.
 
