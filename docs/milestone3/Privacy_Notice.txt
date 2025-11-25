@@ -1,0 +1,54 @@
+Privacy Notice for ReadRight
+
+At ReadRight, we take your privacy seriously. This notice explains how we collect, use, and protect your information when using our app.
+
+1. Information We Collect
+
+User Information: Basic details such as your name, username, and email address to create and manage your account.
+
+Student Progress Data: Reading progress, completed words, scores, and top struggled words to provide personalized learning experiences.
+
+Audio Recordings: Audio clips recorded when practicing reading aloud to help track pronunciation and fluency. Audio clips are only stored if the “Enable Audio Retention” option is selected.
+
+App Usage Data: Non-identifiable usage information to improve app performance and features.
+
+2. How We Use Your Information
+
+To track student progress and provide meaningful feedback.
+
+To display learning materials and word lists tailored to your learning level.
+
+To analyze audio recordings for reading assessment and improvement, if retained.
+
+To improve the functionality and performance of ReadRight.
+
+3. Audio Retention
+
+Audio recordings are stored only if the “Enable Audio Retention” option is selected.
+
+Audio clips are retained indefinitely unless asked to be removed.
+
+Audio is used solely for assessing reading skills and providing feedback.
+
+4. How We Protect Your Information
+
+All personal, progress, and audio data is stored securely using Firestore, with access restricted to authorized users.
+
+We do not sell, rent, or share your personal information with third parties for marketing purposes.
+
+5. Data Sharing
+
+Your data may be shared with educators or guardians to provide insights on student progress.
+
+Aggregate and anonymized data may be used for research or app improvement purposes.
+
+6. Your Choices
+
+You can review, update, or delete your account and data by contacting us through the app.
+
+You may enable or disable the Audio Retention option at any time.
+
+7. Contact Us
+If you have any questions about your privacy or how your data is handled, please contact us at: [insert support email]
+
+By using ReadRight, you consent to the collection and use of your information, including retained audio recordings, as described in this notice.
