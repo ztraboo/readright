@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:readright/services/word_respository.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 
 class ClassStudentDetails extends StatefulWidget {
   final String studentUid;
@@ -57,6 +60,83 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
     final color = levelColors[_levelColorMap.length % levelColors.length];
     _levelColorMap[level] = color;
     return color;
+  }
+
+
+  // Populate and build data for most recent attempt for a given word
+  Future<Widget> handlePlayback(String targetWord) async {
+
+    // Fetch Student Information
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .where('id', isEqualTo: widget.studentUid)
+        .limit(1)
+        .get();
+
+    // What does this line do?
+    final userData = userDoc.docs.isNotEmpty ? userDoc.docs.first.data() : {};
+
+
+    // Query db for target word details
+    final wordDoc = await FirebaseFirestore.instance
+        .collection('words')
+        .where('text', isEqualTo: targetWord)
+        .limit(1)
+        .get();
+
+    final wordData =
+    wordDoc.docs.isNotEmpty ? wordDoc.docs.first.data() : {};
+
+
+    // match attempt to target word and user
+    final attemptDoc = await FirebaseFirestore.instance
+      .collection('attempts')
+      .where('userId', isEqualTo: userData['id'])
+      .where('wordId', isEqualTo: wordData['id'])
+      .orderBy('createdAt', descending: true)
+      .limit(1)
+      .get();
+
+    final attemptData =
+    attemptDoc.docs.isNotEmpty ? attemptDoc.docs.first.data() : {};
+    final audioPath = attemptData['audioPath'];
+
+
+    return Column(
+        children: [
+          const Text(
+            'Last Attempt:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.volume_up, size: 24, color: Colors.green),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            onPressed: () async {
+              await playAudio(audioPath);
+            },
+          ),
+          Text(
+              attemptData['score'] != null
+                  ? 'Score = ${(attemptData['score'] as num).toStringAsFixed(2)}'
+                  : 'No attempt',              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              )
+          )
+        ]
+    );
+  }
+
+  // Use audioplayers to play firestore audio path 
+  Future<void> playAudio (String audioPath) async {
+    final ref = FirebaseStorage.instance.ref().child(audioPath);
+    final url = await ref.getDownloadURL();
+
+    final player = AudioPlayer();
+    await player.play(UrlSource(url));
   }
 
   // Prevents rebuild loop
@@ -438,42 +518,69 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 16, vertical: 8),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                          child: Row(
                                             children: [
-                                              // Level Label
-                                              const Text(
-                                                'Level:',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
+                                              Column(
+                                                crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                                children: [
+                                                  // Level Label
+                                                  const Text(
+                                                    'Level:',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
 
-                                              // Level Badge
-                                              Container(
-                                                padding:
+                                                  // Level Badge
+                                                  Container(
+                                                    padding:
                                                     const EdgeInsets.symmetric(
                                                         horizontal: 12,
                                                         vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: getLevelColor(level),
-                                                  borderRadius:
+                                                    decoration: BoxDecoration(
+                                                      color: getLevelColor(level),
+                                                      borderRadius:
                                                       BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  level,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 14,
+                                                    ),
+                                                    child: Text(
+                                                      level,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
+                                                  const SizedBox(height: 12),
+                                                ],
                                               ),
-                                              const SizedBox(height: 12),
-                                            ],
-                                          ),
+                                              const Spacer(),
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                children: [
+                                                  FutureBuilder<Widget>(
+                                                    future: handlePlayback(text), // returns Future<Widget>
+                                                    builder: (context, snapshot) {
+                                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                                        return const CircularProgressIndicator();
+                                                      } else if (snapshot.hasError) {
+                                                        return Text('Error: ${snapshot.error}');
+                                                      } else if (snapshot.hasData) {
+                                                        return snapshot.data!;
+                                                      } else if (snapshot == null) {
+                                                        return const Text('No attempt yet');
+                                                      } else {
+                                                        return const Text('No data');
+                                                      }
+                                                    },
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                ],
+                                              )
+                                            ]
+                                          )
                                         ),
                                       ),
                                     ],
