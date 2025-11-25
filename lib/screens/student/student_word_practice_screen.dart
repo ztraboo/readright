@@ -28,6 +28,7 @@ import 'package:readright/models/student_progress_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/models/word_model.dart';
 import 'package:readright/services/attempt_repository.dart';
+import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/student_progress_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_colors.dart';
@@ -57,7 +58,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   int _msElapsed = 0; // milliseconds elapsed during recording
 
   late final UserModel? _currentUser;
-  late final ClassModel? _currentClassSection;
+  ClassModel? _currentClassSection;
 
   WordModel? practiceWord;
   String? practiceSentenceId;
@@ -316,6 +317,22 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       debugPrint('StudentWordPracticePage: Student progress updated successfully for userId: $userId');
     } catch (e) {
       debugPrint('StudentWordPracticePage: Error updating student progress: $e');
+    }
+
+    // Save class progress update to Firestore.
+    try {
+      // Fetch the current class model since it might have changed between attempts for multiple students.
+      _currentClassSection = await ClassRepository().fetchClassById(classId);
+      // ignore: use_build_context_synchronously
+      context.read<CurrentUserModel>().classSection = _currentClassSection;
+
+      await ClassRepository().upsertClass(
+        await _currentClassSection!
+          .addAttemptId(wordId: wordId, score: score)
+        );
+      debugPrint('StudentWordPracticePage: Class progress updated successfully for classId: $classId');
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: Error updating class progress: $e');
     }
   }
 

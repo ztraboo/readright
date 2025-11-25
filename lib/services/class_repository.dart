@@ -13,7 +13,7 @@ import 'package:readright/utils/firestore_metadata.dart';
 /// createdBy: string, Firebase authentication account User UID
 /// id: string, document id (may be generated or provided).
 /// name: string, human-friendly class name.
-/// classAverage: double, average class score (0..100).
+/// averageClassWordAttemptScore: double, average class score (0..100).
 /// classCode: string, join code / passcode for the class.
 /// teacherId: string, UID of the teacher who owns the class.
 /// studentIds: array of student UIDs.
