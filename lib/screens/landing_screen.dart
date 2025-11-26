@@ -50,65 +50,67 @@ class _LandingPageState extends State<LandingPage> {
               ),
             // Layout the main content in a column.  
             SafeArea(
-              child: Column(
-                children: [
-                  SizedBox(height: 96.0),
-                  // Logo
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 62),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Read',
-                          style: AppStyles.readTextBold.copyWith(
-                            fontSize: 64,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    SizedBox(height: 96.0),
+                    // Logo
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 36),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Read',
+                            style: AppStyles.readTextBold.copyWith(
+                              fontSize: 64,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 5),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 125,
-                              height: 40,
-                              child: Text(
-                                'Right',
-                                style: AppStyles.rightText.copyWith(
-                                  fontSize: 48,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            SizedBox(height: 5),
-                            Container(
-                              width: 90,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: AppColors.textPrimaryGray,
-                                borderRadius: BorderRadius.circular(5),
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 1,
+                          SizedBox(width: 5),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 125,
+                                height: 40,
+                                child: Text(
+                                  'Right',
+                                  style: AppStyles.rightText.copyWith(
+                                    fontSize: 48,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              SizedBox(height: 5),
+                              Container(
+                                width: 90,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: AppColors.textPrimaryGray,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 50.0),
-                  // Mascot illustration
-                  Center(
-                    child: SvgPicture.asset(
-                      'assets/mascot/yeti_drink.svg',
-                      width: 327,
-                      height: 537,
-                      semanticsLabel: 'Yeti drinking beverage',
+                    SizedBox(height: 50.0),
+                    // Mascot illustration
+                    Center(
+                      child: SvgPicture.asset(
+                        'assets/mascot/yeti_drink.svg',
+                        width: 327,
+                        height: 537,
+                        semanticsLabel: 'Yeti drinking beverage',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

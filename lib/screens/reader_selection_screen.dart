@@ -19,7 +19,10 @@ class ReaderSelectionPage extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 50),
               child: Column(
                 children: [
-                  Text('Reader Selection', style: AppStyles.headerText),
+                  Text(
+                      'Reader Selection',
+                      style: AppStyles.headerText.copyWith(height:1.0)
+                  ),
                   SizedBox(height: 10),
                   Text(
                     'Select your role to begin learning how to pronounce words.',
