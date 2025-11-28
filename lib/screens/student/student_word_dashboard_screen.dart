@@ -233,17 +233,39 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
     required int remaining,
     required double progress,
   }) {
-     
     return GestureDetector(
       onTap: () async {
-        Navigator.pushNamed(
-          context,
-          '/student-word-practice',
-          arguments: {
-            'practiceWord': await context.read<CurrentUserModel>().fetchUsersNextPracticeWord(wordLevelFromString(title)),
-            'wordLevel': wordLevelFromString(title),
-          }, 
-        );
+          // show a little feedback while we fetch (optional)
+          // showDialog(
+          //   context: context,
+          //   barrierDismissible: false,
+          //   builder: (_) => const Center(child: CircularProgressIndicator()),
+          // );
+
+          // final WordModel? practiceWord = await context
+          //     .read<CurrentUserModel>()
+          //     .fetchUsersNextPracticeWord(wordLevelFromString(title));
+
+          // remove the loading dialog
+          // if (Navigator.canPop(context)) Navigator.of(context).pop();
+
+          // If no word available, show snack or early return
+          // if (practiceWord == null) {
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     const SnackBar(content: Text('No practice word available')),
+          //   );
+          //   return;
+          // }
+
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/student-word-practice',
+            (Route<dynamic> route) => false,
+            arguments: {
+              // 'practiceWord': practiceWord,
+              'wordLevel': wordLevelFromString(title),
+            },
+          );
       },
       child: Container(
         padding: const EdgeInsets.all(20),

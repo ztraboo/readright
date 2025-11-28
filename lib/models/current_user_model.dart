@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/class_model.dart';
 import 'package:readright/models/user_model.dart';
@@ -32,6 +33,20 @@ class CurrentUserModel extends ChangeNotifier {
   }
   ClassModel? get classSection => _classSection;
 
+  WordLevel? _currentWordLevel;
+  WordLevel? get currentWordLevel => _currentWordLevel;
+  set currentWordLevel(WordLevel? level) {
+    _currentWordLevel = level;
+    notifyListeners();
+  }
+
+  Map<WordLevel, bool> _wordLevelsCompleted = {};
+  Map<WordLevel, bool> get wordLevelsCompleted => _wordLevelsCompleted;
+  set wordLevelsCompleted(Map<WordLevel, bool> levelsCompleted) {
+    _wordLevelsCompleted = levelsCompleted;
+    notifyListeners();
+  }
+
   List<AttemptModel> _wordAttempts = [];
   List<AttemptModel> get wordAttempts => _wordAttempts;
   set wordAttempts(List<AttemptModel> attempts) {
@@ -49,6 +64,11 @@ class CurrentUserModel extends ChangeNotifier {
     }
 
     _user = userModel;
+
+    if (_user == null) {
+      debugPrint('CurrentUserModel: User is null, cannot log in.');
+      return;
+    }
 
     debugPrint('CurrentUserModel: Logging in username ${_user!.username}, email ${_user!.email}');
 
@@ -122,6 +142,9 @@ class CurrentUserModel extends ChangeNotifier {
   Future<WordModel?> fetchUsersNextPracticeWord(WordLevel wordLevel) async {
 
     try {
+      // Update the current word level in the model
+      currentWordLevel = wordLevel;
+
       // Make sure that attempts are up to date. This ensures that we have the latest data when 
       // calculating the next practice word.
       wordAttempts = await AttemptRepository().fetchAttemptsByUser(
@@ -160,8 +183,32 @@ class CurrentUserModel extends ChangeNotifier {
         if (failingAttemptWordIds.isNotEmpty) {
           practiceWordId = failingAttemptWordIds.first;
         } else {
-          // Fallback to the first word if all words have passing attempts.
-          practiceWordId = wordIds.first;
+            // Mark this level as completed and advance to the next level if available.
+            // Use the setter so listeners are notified.
+            wordLevelsCompleted = {
+            ..._wordLevelsCompleted,
+            wordLevel: true,
+            };
+
+            // Determine the next level (if any) and fetch its next practice word.
+            final levels = fetchWordLevelsIncreasingDifficultyOrder();
+            final currentIndex = levels.indexOf(wordLevel);
+            if (currentIndex >= 0 && currentIndex < levels.length - 1) {
+                final nextLevel = levels[currentIndex + 1];
+                debugPrint('CurrentUserModel: Level ${wordLevel.name} completed. Advancing to ${nextLevel.name}.');
+
+                currentWordLevel = nextLevel;
+
+                // return await fetchUsersNextPracticeWord(nextLevel);
+                return null;
+            } else {
+                // No further levels, return null.
+                debugPrint('CurrentUserModel: Level ${wordLevel.name} completed. No further levels.');
+
+                currentWordLevel = null;
+                
+                return null;
+            }
         }
       }
       final practiceWord = await WordRepository().fetchWordById(practiceWordId);

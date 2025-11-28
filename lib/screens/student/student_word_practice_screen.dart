@@ -113,15 +113,71 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
-        setState(() {
-          practiceWord = args['practiceWord'] as WordModel?;
-          wordLevel = args['wordLevel'] as WordLevel?;
-        });
+        // setState(() {
+          // practiceWord = args['practiceWord'] as WordModel?;
+          context
+            .read<CurrentUserModel>()
+            .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (onValue){ 
+              setState(() {
+                wordLevel = args['wordLevel'] as WordLevel?;
+
+                // Go to the student word level completed page if no practice word is available
+                if (onValue == null && wordLevel != context.read<CurrentUserModel>().currentWordLevel) {
+                  Navigator.of(context).pushReplacementNamed(
+                    '/student-word-level-completed',
+                    arguments: {
+                      'currentWordLevel': wordLevel,
+                      'nextWordLevel': context.read<CurrentUserModel>().currentWordLevel,
+                    },
+                  );
+                  return;
+                }
+
+                practiceWord = onValue;
+
+                // Fetch a new sentence for the practice word.
+                // fetchNewWordSentence();
+
+                // Handle the header TTS.
+                // We're only calling this here to ensure it runs after initial state setup.
+                // This will not be called again if the user traverse from
+                // the student feedback screen back to this practice screen.
+                _handleIntroductionTts();
+
+                // Execute this line only if there is no network
+                if (online == false){
+                  _startSTTAccessor();
+                }
+              });
+            });
+        // });
       } else if (args is Map) {
-        setState(() {
-          practiceWord = args['practiceWord'] as WordModel?;
-          wordLevel = args['wordLevel'] as WordLevel?;
-        });
+        // setState(() {
+          // practiceWord = args['practiceWord'] as WordModel?;
+          // wordLevel = args['wordLevel'] as WordLevel?;
+          context
+            .read<CurrentUserModel>()
+            .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (onValue){ 
+                setState(() {
+                  wordLevel = args['wordLevel'] as WordLevel?;
+                  practiceWord = onValue;
+
+                  // Fetch a new sentence for the practice word.
+                  // fetchNewWordSentence();
+
+                  // Handle the header TTS.
+                  // We're only calling this here to ensure it runs after initial state setup.
+                  // This will not be called again if the user traverse from
+                  // the student feedback screen back to this practice screen.
+                  _handleIntroductionTts();
+
+                  // Execute this line only if there is no network
+                  if (online == false){
+                    _startSTTAccessor();
+                  }
+                });
+            });
+        // });
       }
       debugPrint('StudentWordPracticePage: ${practiceWord?.text}, Word Level: ${wordLevel?.name}');
 
@@ -137,32 +193,32 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         }
       });
 
-      if (practiceWord != null) {
+      // if (practiceWord != null) {
           // Fetch a new sentence for the practice word.
-          fetchNewWordSentence();
+          // fetchNewWordSentence();
 
           // Handle the header TTS.
           // We're only calling this here to ensure it runs after initial state setup.
           // This will not be called again if the user traverse from
           // the student feedback screen back to this practice screen.
-          _handleIntroductionTts();
+          // _handleIntroductionTts();
 
-          // Initialize the PCM player now. The recorder will manage microphone
-          // permission and initialize itself on start().
-          _initPCMPlayer();
+        // Initialize the PCM player now. The recorder will manage microphone
+        // permission and initialize itself on start().
+        _initPCMPlayer();
 
-          // Initialize the PCM recorder if not already initialized
-          _initPCMRecorder();
+        // Initialize the PCM recorder if not already initialized
+        _initPCMRecorder();
 
-          // Start listening to the assessor stream after recorder is started.
-          // This avoids an issue with the UI stop counter not updating if the
-          // recorder is started/stopped multiple times.
+        // Start listening to the assessor stream after recorder is started.
+        // This avoids an issue with the UI stop counter not updating if the
+        // recorder is started/stopped multiple times.
 
-          // Execute this line only if there is no network
-          if (online == false){
-            _startSTTAccessor();
-          }
-      }
+        // // Execute this line only if there is no network
+        // if (online == false){
+        //   _startSTTAccessor();
+        // }
+      // }
 
     });
 
@@ -835,17 +891,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Error',
-                      style: AppStyles.headerText,
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.buttonPrimaryBlue),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No words are available to practice for this category level. Please return to the word dashboard.',
-                      style: AppStyles.subheaderText,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildDashboardButton(),
                   ],
                 ),
               ),
@@ -854,11 +902,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
               child: Column(
                 children: [
                   _buildHeader(),
-                  const SizedBox(height: 19),
+                  const SizedBox(height: 25),
                   _buildYetiIllustration(),
-                  const SizedBox(height: 18),
-                  _buildSentenceSection(),
-                  const SizedBox(height: 0),
+                  const SizedBox(height: 25),
+                  // _buildSentenceSection(),
+                  // const SizedBox(height: 0),
                   _buildInstructions(),
                   const SizedBox(height: 24),
                   Row(
@@ -891,9 +939,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     if (!_isRecording && !_isProcessingRecording) {
       Future.microtask(() async {
         // Ensure the prompt audio plays first, then the word audio.
-        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}lets_pronounce_the_word.mp3');
-        await _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
-        await _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3');
+        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}can_you_pronounce_the_word_below.mp3');
+        // await _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
+        // await _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3');
+        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}click_the_record_button_to_get_started.mp3');
 
         setState(() {
           _isIntroductionTtsPlaying = false;
@@ -907,22 +956,22 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 200,
+      height: 240,
       color: AppColors.bgPrimaryGray,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            const SizedBox(
-              width: 349,
+            SizedBox(
+              width: 380,
               child: Text(
-                "Let's pronounce the word",
+                "Can you pronounce the word below?",
                 textAlign: TextAlign.center,
-                style: AppStyles.subheaderText,
+                style: AppStyles.subheaderText
               ),
             ),
-            const SizedBox(height: 19),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -931,14 +980,20 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   child: Text(
                     '${practiceWord?.text}',
                     textAlign: TextAlign.center,
-                    style: AppStyles.headerText,
+                    style: AppStyles.headerText.copyWith(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                _buildTtsWordButton(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+                  child: _buildTtsWordButton(),
+                ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -1097,18 +1152,29 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   Widget _buildInstructions() {
     return Container(
       width: double.infinity,
-      height: 86,
-      padding: const EdgeInsets.all(10),
-      // decoration: BoxDecoration(
-      //   color: const Color(0xFFFFC6C0).withOpacity(0.20),
-      // ),
+      height: 100,
+      alignment: AlignmentDirectional.center,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC6C0).withOpacity(0.20),
+      ),
       child: const Center(
         child: SizedBox(
           width: 349,
-          child: Text(
-            'Click the record button below so that we can hear you pronounce the word!',
-            textAlign: TextAlign.center,
-            style: AppStyles.chipText,
+          child: Column(
+            children: [
+              Text(
+                'Click the record button',
+                textAlign: TextAlign.center,
+                style: AppStyles.subheaderText,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'to get started!',
+                textAlign: TextAlign.center,
+                style: AppStyles.subheaderText,
+              ),
+            ],
           ),
         ),
       ),
@@ -1278,7 +1344,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       color: (!_isRecording && !_isProcessingRecording)
               ? Colors.green
               : Colors.grey,
-      iconSize: 40,
+      iconSize: 50,
       tooltip: 'Play Practice Word',
       onPressed: () {
         (!_isRecording && !_isProcessingRecording)

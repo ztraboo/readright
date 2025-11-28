@@ -95,6 +95,7 @@ class SeedWordsUploader {
     if (c.contains('third')) return WordLevel.thirdGrade;
     if (c.contains('fourth')) return WordLevel.fourthGrade;
     if (c.contains('fifth')) return WordLevel.fifthGrade;
+    if (c.contains('custom')) return WordLevel.custom;
     return WordLevel.custom;
   }
 

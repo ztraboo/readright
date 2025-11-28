@@ -18,6 +18,7 @@ import 'screens/reader_selection_screen.dart';
 import 'screens/student/student_login_screen.dart';
 import 'screens/student/student_passcode_verification_screen.dart';
 import 'screens/student/student_word_dashboard_screen.dart';
+import 'screens/student/student_word_level_completed.dart';
 // Defer loading the heavy student practice screen (it pulls in FFmpeg).
 import 'screens/student/student_word_practice_screen.dart' deferred as student_practice;
 import 'screens/student/student_word_feedback_screen.dart';
@@ -140,6 +141,35 @@ class _AppInitializerState extends State<AppInitializer> {
       //   debugPrint('Collection rename failed: $e\n$st');
       // });
 
+      // Delete all documents in 'attempts' where userId == current signed-in user.
+      // try {
+      //   final uid = auth.currentUser?.uid;
+      //   if (uid == null) {
+      //     debugPrint('No signed-in user; skipping attempts cleanup.');
+      //   } else {
+      //     const int batchSize = 500;
+      //     while (true) {
+      //       final query = firestore
+      //           .collection('attempts')
+      //           .where('userId', isEqualTo: uid)
+      //           .limit(batchSize);
+      //       final snapshot = await query.get();
+      //       if (snapshot.docs.isEmpty) break;
+
+      //       final batch = firestore.batch();
+      //       for (final doc in snapshot.docs) {
+      //         batch.delete(doc.reference);
+      //       }
+      //       await batch.commit();
+      //       debugPrint('Deleted ${snapshot.docs.length} attempt(s) for uid=$uid');
+      //       // Continue looping until no more matching documents remain.
+      //     }
+      //     debugPrint('Attempt cleanup completed for uid=$uid');
+      //   }
+      // } catch (e, st) {
+      //   debugPrint('Failed to delete attempts for current user: $e\n$st');
+      // }
+
     } catch (e, st) {
       debugPrint('Firebase initialization failed: $e\n$st');
     }
@@ -187,6 +217,7 @@ class ReadRightApp extends StatelessWidget {
           );
         },
         '/student-word-dashboard': (context) => const StudentWordDashboardPage(),
+        '/student-word-level-completed': (context) => const StudentWordLevelCompletedPage(),
         '/student-word-practice': (context) => FutureBuilder<void>(
               future: student_practice.loadLibrary(),
               builder: (context, snap) {

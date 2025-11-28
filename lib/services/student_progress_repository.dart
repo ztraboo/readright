@@ -164,6 +164,8 @@ class StudentProgressRepository {
       'uid': uid,
       'class': classId,
       'averageWordAttemptScore': 0,
+      'currentWordLevel': null,
+      'wordLevelsCompleted': {},
       'countWordsCompleted': 0,
       'countWordsAttempted': 0,
       'wordAttemptIds': <String>[],
