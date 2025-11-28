@@ -43,6 +43,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   late final ClassModel? _currentClassSection;
 
   WordModel? practiceWord;
+  String? practiceSentenceId;
+  int? practiceSentenceIndex;
+  String? displaySentence = '';
   WordLevel? wordLevel;
   bool hasNextWord = true;
 
@@ -108,6 +111,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         }
       });
 
+      // Grab the next sentence for the practice word.
+      fetchNewWordSentence();
+
       // Handle the header TTS.
       // We're only calling this here to ensure it runs after initial state setup.
       // This will not be called again if the user traverse from
@@ -141,6 +147,19 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     rounded = rounded.clamp(0.0, 5.0) as double;
 
     return rounded;
+  }
+
+  void fetchNewWordSentence() {
+      // Select a random sentence index for the practice word
+      // Normalize to match filenames
+      // Only pick a sentence index if we haven't already set one.
+      final word = practiceWord?.text.trim().toLowerCase();
+      final idx = (DateTime.now().millisecondsSinceEpoch % 3) + 1;
+      debugPrint('StudentWordPracticePage: Selected sentence index: $idx for word: $word');
+      setState(() {
+        practiceSentenceId = 'sentence_$idx';
+        practiceSentenceIndex = idx;
+      });
   }
 
   void _handleRetry() {
@@ -266,10 +285,12 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         assetPathScore += 'let_us_try_again.mp3';
       }
       
-      // Play the score message, then "for the word", then the word itself.
-      await _handleTts(assetPath: assetPathScore);
+      // Play the let's see how you did, then "for the word", then the word itself, then score message.
+      await _handleTts(assetPath: '${AppConstants.assetPathPhrases}lets_see_how_you_did.mp3');
       await _handleTts(assetPath: '${AppConstants.assetPathPhrases}for_the_word.mp3');
       await _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
+      await _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3');
+      await _handleTts(assetPath: assetPathScore);
 
       // Provide additional guidance based on score (e.g. Next or Retry to continue).
       if (_currentScore >= _passingThresholdStars) {
@@ -294,11 +315,15 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     super.dispose();
   }
 
-  void _handleDashboard() {
+  void _handleWordLevelCompleted() {
     Navigator.pushNamedAndRemoveUntil(
       context,
-      '/student-word-dashboard',
+      '/student-word-level-completed',
       (Route<dynamic> route) => false,
+      arguments: {
+        'currentWordLevel': wordLevel,
+        'nextWordLevel': context.read<CurrentUserModel>().currentWordLevel,
+      },
     );
   }
 
@@ -313,15 +338,14 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
           child: Column(
             children: [
               _buildHeader(),
-              const SizedBox(height: 19),
+              const SizedBox(height: 15),
               _buildYetiIllustration(),
-              const SizedBox(height: 18),
+              const SizedBox(height: 15),
               _buildSentenceSection(),
-              // const SizedBox(height: 0),
+              const SizedBox(height: 15),
               _buildStarRating(),
-              const SizedBox(height: 12),
-              _buildTranscriptSection(),
-              const SizedBox(height: 12),
+              // _buildTranscriptSection(),
+              const SizedBox(height: 15),
               //_buildInstructions(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -333,7 +357,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               ),
               const SizedBox(height: 20),
               // Always show the next button even if the user scores low.
-              _buildDashboardNextButton(),
+              _buildNextButton(),
             ],
           ),
         ),
@@ -344,17 +368,17 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 170,
+      height: 210,
       color: AppColors.bgPrimaryGray,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             const SizedBox(
-              width: 349,
+              width: 380,
               child: Text(
-                "Results for pronouncing",
+                "Let's see how you did for the word",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'SF Compact Display',
@@ -365,22 +389,29 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 19),
-            SizedBox(
-              width: 349,
-              child: Text(
-                practiceWord?.text ?? '',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'SF Pro Display',
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black,
-                  height: 0.61,
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(width: 30),
+                SizedBox(
+                  child: Text(
+                    '${practiceWord?.text}',
+                    textAlign: TextAlign.center,
+                    style: AppStyles.headerText.copyWith(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+                  child: _buildTtsWordButton(),
+                ),
+              ],
             ),
-            const SizedBox(height: 31),
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -390,7 +421,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   Widget _buildYetiIllustration() {
     return SizedBox(
       width: 364,
-      height: 371,
+      height: 350,
       child: _currentScore < _passingThresholdStars ? SvgPicture.asset(
         'assets/mascot/yeti_upset.svg',
         semanticsLabel: 'Yeti Upset',
@@ -403,71 +434,238 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     );
   }
 
-  String _scoreMessage() {
-    if (_currentScore >= 0.0 && _currentScore < 2.0) {
-      return 'Oh no — let\'s try again!';
-    } else if (_currentScore >= 2.0 && _currentScore < 3.5) {
-      return 'Not bad, keep practicing!';
-    } else if (_currentScore >= 3.5 && _currentScore < 4.0) {
-      return 'Good work — you passed!';
-    } else if (_currentScore >= 4.0 && _currentScore < 5.0) {
-      return 'Great job!';
-    } else if (_currentScore >= 5.0) {
-      return 'Excellent! Perfect pronunciation!';
-    } else {
-      return 'Let us try again!';
-    }
-  }
+  // String _scoreMessage() {
+  //   if (_currentScore >= 0.0 && _currentScore < 2.0) {
+  //     return 'Oh no — let\'s try again!';
+  //   } else if (_currentScore >= 2.0 && _currentScore < 3.5) {
+  //     return 'Not bad, keep practicing!';
+  //   } else if (_currentScore >= 3.5 && _currentScore < 4.0) {
+  //     return 'Good work — you passed!';
+  //   } else if (_currentScore >= 4.0 && _currentScore < 5.0) {
+  //     return 'Great job!';
+  //   } else if (_currentScore >= 5.0) {
+  //     return 'Excellent! Perfect pronunciation!';
+  //   } else {
+  //     return 'Let us try again!';
+  //   }
+  // }
 
-  Widget _buildSentenceSection() {
-    return Container(
-      width: double.infinity,
-      height: 77,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFC6C0).withOpacity(0.20),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SvgPicture.asset(
-            'assets/icons/quote-open-editor-svgrepo-com.svg',
-            width: 23,
-            height: 23,
-            semanticsLabel: 'Quote Open',
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: _scoreMessage(),
-                    style: TextStyle(
-                      fontFamily: 'SF Compact Display',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                      height: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(width: 4),
-          SvgPicture.asset(
-            'assets/icons/quote-close-editor-svgrepo-com.svg',
-            width: 23,
-            height: 23,
-            semanticsLabel: 'Quote Close',
-          ),
-        ],
+  // Widget _buildSentenceSection() {
+  //   return Container(
+  //     width: double.infinity,
+  //     height: 77,
+  //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+  //     decoration: BoxDecoration(
+  //       color: const Color(0xFFFFC6C0).withOpacity(0.20),
+  //     ),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.center,
+  //       crossAxisAlignment: CrossAxisAlignment.center,
+  //       children: [
+  //         SvgPicture.asset(
+  //           'assets/icons/quote-open-editor-svgrepo-com.svg',
+  //           width: 23,
+  //           height: 23,
+  //           semanticsLabel: 'Quote Open',
+  //         ),
+  //         const SizedBox(width: 4),
+  //         Flexible(
+  //           child: Text.rich(
+  //             TextSpan(
+  //               children: [
+  //                 TextSpan(
+  //                   text: _scoreMessage(),
+  //                   style: TextStyle(
+  //                     fontFamily: 'SF Compact Display',
+  //                     fontSize: 20,
+  //                     fontWeight: FontWeight.w400,
+  //                     color: Colors.black,
+  //                     height: 1.1,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //             textAlign: TextAlign.center,
+  //           ),
+  //         ),
+  //         const SizedBox(width: 4),
+  //         SvgPicture.asset(
+  //           'assets/icons/quote-close-editor-svgrepo-com.svg',
+  //           width: 23,
+  //           height: 23,
+  //           semanticsLabel: 'Quote Close',
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  Widget _buildHighLightedWordInSentence({
+    required String sentence,
+    required String wordToHighlight,
+    required TextStyle textStyle,
+    required TextStyle highlightStyle,
+  }) {
+    // Guard for empty inputs
+    if (sentence.isEmpty || wordToHighlight.trim().isEmpty) {
+      return Flexible(
+        child: Text(
+          sentence,
+          textAlign: TextAlign.center,
+          style: textStyle,
+        ),
+      );
+    }
+
+    // Build a regex that matches the target word as a whole word, case-insensitive.
+    final escaped = RegExp.escape(wordToHighlight.trim());
+    final regex = RegExp(r'\b' + escaped + r'\b', caseSensitive: false);
+
+    final matches = regex.allMatches(sentence).toList();
+
+    // If there are no matches, just return the plain sentence.
+    if (matches.isEmpty) {
+      return Flexible(
+        child: Text(
+          sentence,
+          textAlign: TextAlign.center,
+          style: textStyle,
+        ),
+      );
+    }
+
+    // Build TextSpans preserving original casing from the sentence:
+    final spans = <TextSpan>[];
+    var lastIndex = 0;
+    for (final m in matches) {
+      if (m.start > lastIndex) {
+        spans.add(TextSpan(
+          text: sentence.substring(lastIndex, m.start),
+          style: textStyle,
+        ));
+      }
+      spans.add(TextSpan(
+        text: sentence.substring(m.start, m.end),
+        style: highlightStyle,
+      ));
+      lastIndex = m.end;
+    }
+    if (lastIndex < sentence.length) {
+      spans.add(TextSpan(
+        text: sentence.substring(lastIndex),
+        style: textStyle,
+      ));
+    }
+
+    return Flexible(
+      child: RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          children: spans,
+        ),
       ),
     );
   }
+
+  Widget _buildSentenceSection() {
+    if (!mounted) return Container();
+
+    return (wordLevel == null)
+      ? CircularProgressIndicator()
+      : FutureBuilder<dynamic>(
+        future: WordRepository().fetchWordByTextAndLevel(
+          practiceWord?.text ?? '',
+          wordLevel!,
+        ),
+        builder: (context, snapshot) {
+          // debugPrint('StudentWordPracticePage: Word fetch snapshot: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
+
+          if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+            try {
+              // Offset by -1 to convert 1-based index to 0-based list index for what's stored in the Firestore.
+              final sentences = snapshot.data?.sentences;
+              if (sentences is List && sentences.length > (practiceSentenceIndex! - 1)) {
+                displaySentence = sentences[practiceSentenceIndex! - 1] as String? ?? '';
+              }
+            } catch (e) {
+                displaySentence = '';
+            }
+          }
+
+          if (displaySentence?.isEmpty ?? true) {
+            // Fallback sentence if repository didn't provide one.
+            displaySentence = '...';
+          }
+
+          return Container(
+            width: double.infinity,
+            height: 100,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFC6C0).withOpacity(0.20),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/quote-open-editor-svgrepo-com.svg',
+                  width: 23,
+                  height: 23,
+                  semanticsLabel: 'Quote Open',
+                ),
+                const SizedBox(width: 4),
+                _buildHighLightedWordInSentence(
+                  sentence: displaySentence ?? '',
+                  wordToHighlight: practiceWord?.text ?? '',
+                  textStyle: AppStyles.subheaderText.copyWith(
+                    fontSize: 24,
+                  ),
+                  highlightStyle: AppStyles.subheaderTextBold.copyWith(
+                    fontSize: 24,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                SvgPicture.asset(
+                  'assets/icons/quote-close-editor-svgrepo-com.svg',
+                  width: 23,
+                  height: 23,
+                  semanticsLabel: 'Quote Close',
+                ),
+                const SizedBox(width: 8),
+                _buildTtsWordSentenceButton(),
+              ],
+            ),
+          );
+        },
+      );
+  }
+
+   Widget _buildTtsWordButton() {
+    // Disable audio button while recording or processing to prevent cheating.
+    return IconButton(
+      icon: Icon(Icons.volume_up),
+      color: Colors.green,
+      iconSize: 40,
+      tooltip: 'Play Practice Word',
+      onPressed: () {
+        _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
+      },
+    );
+  }
+
+  Widget _buildTtsWordSentenceButton() {
+    // Disable audio button while recording or processing to prevent cheating.
+    return IconButton(
+      icon: Icon(Icons.volume_up),
+      color: Colors.green,
+      iconSize: 40,
+      tooltip: 'Play Practice Word Sentence',
+      onPressed: () {
+        _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3');
+      },
+    );
+  } 
   
   Widget _buildStarRating() {
     const int totalStars = 5;
@@ -504,8 +702,8 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: SvgPicture.asset(
               asset,
-              width: 60,
-              height: 60,
+              width: 70,
+              height: 70,
               semanticsLabel: semantics,
             ),
           );
@@ -529,7 +727,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               ? 'You said: "${_attemptResult!.recognizedText}"'
               : 'Your pronunciation will appear here.',
           textAlign: TextAlign.center,
-          style: AppStyles.chipText,
+          style: AppStyles.chipText.copyWith(
+            fontSize: 20
+          ),
         ),
       ),
     );
@@ -629,7 +829,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       );
   }
 
-  Widget _buildDashboardNextButton() {
+  Widget _buildNextButton() {
     return (_isIntroductionTtsPlaying == true)
       ? Container(
           height: 44,
@@ -657,7 +857,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               context,
               '/student-word-practice',
               arguments: {
-                'practiceWord': word,
+                'nextPracticeWord': word,
                 'wordLevel': wordLevel,
               },
             );
@@ -666,7 +866,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
               hasNextWord = false;
             });
           
-            _handleDashboard();
+            _handleWordLevelCompleted();
           }
         });
       },

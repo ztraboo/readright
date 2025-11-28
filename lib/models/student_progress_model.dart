@@ -1,4 +1,5 @@
 import 'package:readright/utils/app_scoring.dart';
+import 'package:readright/utils/enums.dart';
 
 /// Model representing student progress statistics stored in Firestore.
 ///
@@ -9,6 +10,20 @@ class StudentProgressModel {
   /// Average score for the student (e.g. 92.0)
   final double averageWordAttemptScore;
 
+  WordLevel? get currentWordLevel {
+    // Determine current word level based on completed levels.
+    for (final level in fetchWordLevelsIncreasingDifficultyOrder()) {
+      final completed = wordLevelsCompleted[level] ?? false;
+      if (!completed) {
+        return level;
+      }
+    }
+    return null; // All levels completed
+  }
+
+  /// Mapping WordLevel and whether the level has been completed.
+  final Map<WordLevel, bool> wordLevelsCompleted = const <WordLevel, bool>{};
+
   /// Internal list of Attempt IDs (AttemptModel document IDs). When serialized to Firestore this
   /// is stored as a list of AttemptModel.id strings (document references).
   final List<String> wordAttemptIds;
@@ -16,7 +31,7 @@ class StudentProgressModel {
   /// Internal unique set of completed word IDs (derived from AttemptModel.wordId).
   final Set<String> _wordsCompleted;
 
-    /// Returns a list view of the internally-tracked unique completed word IDs.
+  /// Returns a list view of the internally-tracked unique completed word IDs.
   List<String> get wordsCompleted => _wordsCompleted.toList();
 
   /// Distinct count of completed words (derived from the unique set).
@@ -33,6 +48,8 @@ class StudentProgressModel {
 
   StudentProgressModel({
     this.averageWordAttemptScore = 0.0,
+    WordLevel? currentWordLevel,
+    Map<WordLevel, bool>? wordLevelsCompleted,
     List<String>? wordAttemptIds,
     List<String>? wordStruggledIds,
     this.countWordsAttempted = 0,
@@ -90,6 +107,8 @@ class StudentProgressModel {
   Map<String, dynamic> toJson() {
     return {
       'wordAttemptIds': wordAttemptIds,
+      'currentWordLevel': currentWordLevel?.name,
+      'wordLevelsCompleted': wordLevelsCompleted.map((key, value) => MapEntry(key.name, value)),
       'averageWordAttemptScore': averageWordAttemptScore,
       'countWordsAttempted': countWordsAttempted,
       'countWordsCompleted': countWordsCompleted,
@@ -108,6 +127,16 @@ class StudentProgressModel {
         json['wordAttemptIds'] ?? json['wordAttemptIds'] ?? const [];
     final wordAttemptIds = List<String>.from(attemptsRaw as List<dynamic>);
 
+    final currentWordLevelRaw = json['currentWordLevel'] as String?;
+    final currentWordLevel = currentWordLevelRaw != null
+        ? WordLevel.values.firstWhere((e) => e.name == currentWordLevelRaw)
+        : null;
+
+    final wordLevelsCompletedRaw = json['wordLevelsCompleted'] ?? const {};
+    final wordLevelsCompleted = (wordLevelsCompletedRaw as Map<String, dynamic>).map(
+      (key, value) => MapEntry(WordLevel.values.firstWhere((e) => e.name == key), value as bool),
+    );
+
     final wordStruggledIdsRaw = json['wordStruggledIds'] ?? const [];
     final wordStruggledIds = List<String>.from(wordStruggledIdsRaw as List<dynamic>);
 
@@ -116,6 +145,8 @@ class StudentProgressModel {
 
     return StudentProgressModel(
       averageWordAttemptScore: (json['averageWordAttemptScore'] as num?)?.toDouble() ?? 0.0,
+      currentWordLevel: currentWordLevel,
+      wordLevelsCompleted: wordLevelsCompleted,
       wordAttemptIds: wordAttemptIds,
       wordStruggledIds: wordStruggledIds,
       countWordsAttempted: json['countWordsAttempted'] as int? ?? 0,
@@ -127,6 +158,8 @@ class StudentProgressModel {
   // Copy helper
   StudentProgressModel copyWith({
     double? averageWordAttemptScore,
+    WordLevel? currentWordLevel,
+    Map<WordLevel, bool>? wordLevelsCompleted,
     List<String>? wordAttemptIds,
     List<String>? wordsStruggled,
     int? countWordsAttempted,
@@ -135,6 +168,8 @@ class StudentProgressModel {
   }) {
     return StudentProgressModel(
       averageWordAttemptScore: averageWordAttemptScore ?? this.averageWordAttemptScore,
+      currentWordLevel: currentWordLevel ?? this.currentWordLevel,
+      wordLevelsCompleted: wordLevelsCompleted ?? Map<WordLevel, bool>.from(this.wordLevelsCompleted),
       wordAttemptIds: wordAttemptIds ?? List<String>.from(this.wordAttemptIds),
       wordStruggledIds: wordsStruggled ?? List<String>.from(this.wordStruggledIds),
       countWordsAttempted: countWordsAttempted ?? this.countWordsAttempted,
