@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +11,8 @@ import '../../models/user_model.dart';
 import '../../services/export_student_progress.dart';
 import '../../services/student_progress_repository.dart';
 import '../../services/word_respository.dart';
+import '../../utils/app_colors.dart';
+
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -186,14 +190,24 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Teacher Dashboard'),
+          title: const Text('Teacher Dashboard',style: TextStyle(fontWeight: FontWeight.bold)),
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.people), text: 'Students'),
-              Tab(icon: Icon(Icons.info), text: 'Class Details'),
+              Tab(icon: Icon(Icons.people,color: AppColors.buttonPrimaryGray), text: 'Students',),
+              Tab(icon: Icon(Icons.info,color: AppColors.buttonPrimaryGray), text: 'Class Details'),
             ],
+            unselectedLabelColor: AppColors.textPrimaryGray,
+            labelColor: AppColors.textPrimaryGray,
           ),
+          shape: Border(
+            bottom: BorderSide(
+              color: AppColors.buttonPrimaryGray,
+            ),
+          ),
+          elevation: 3,
+          backgroundColor: AppColors.bgPrimaryLightBlue,
         ),
+        backgroundColor: AppColors.bgPrimaryWhite,
         body: TabBarView(
           children: [
             // Students Tab
@@ -344,6 +358,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                                     .doc(classId)
                                     .update({'audioRetention': value});
                               },
+                              activeColor: AppColors.textPrimaryBlack,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -361,8 +376,12 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            icon: const Icon(Icons.book),
-                            label: const Text('Access Word Dashboard'),
+                            icon: const Icon(Icons.book,color: AppColors.textPrimaryBlack),
+                            label: const Text('Access Word Dashboard',style: TextStyle(color:AppColors.textPrimaryBlack,fontWeight: FontWeight.bold),),
+                            style: const ButtonStyle(
+                              backgroundColor: WidgetStatePropertyAll<Color>(AppColors.bgPrimaryLightOrange),
+                              elevation: WidgetStatePropertyAll(3.0)
+                            ),
                             onPressed: () {
                               Navigator.pushNamed(
                                 context,
@@ -377,8 +396,12 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            icon: const Icon(Icons.download),
-                            label: const Text('Export Class Progress to .csv'),
+                            icon: const Icon(Icons.download,color: AppColors.textPrimaryBlack),
+                            label: const Text('Export Class Progress to .csv',style: TextStyle(color:AppColors.textPrimaryBlack,fontWeight: FontWeight.bold),),
+                            style: const ButtonStyle(
+                              backgroundColor: WidgetStatePropertyAll<Color>(AppColors.buttonSecondaryLightGreen),
+                              elevation: WidgetStatePropertyAll(3.0)
+                            ),
                             onPressed: () {
                               if (_currentUser?.id != null) {
                                 exportStudentProgress(
@@ -438,6 +461,7 @@ class _StudentsTabState extends State<StudentsTab> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Add New Student'),
+          backgroundColor: AppColors.bgPrimaryLightBlue,
           content: SingleChildScrollView(
             child: Column(
               children: [
@@ -460,7 +484,7 @@ class _StudentsTabState extends State<StudentsTab> {
           ),
           actions: [
             TextButton(
-              child: const Text("Cancel"),
+              child: const Text("Cancel",style: TextStyle(color: AppColors.textPrimaryBlack),),
               onPressed: () {
                 fullNameController.clear();
                 emailController.clear();
@@ -469,7 +493,11 @@ class _StudentsTabState extends State<StudentsTab> {
               },
             ),
             ElevatedButton(
-              child: const Text("Create"),
+              style: const ButtonStyle(
+                backgroundColor: WidgetStatePropertyAll<Color>(AppColors.bgPrimaryLightGrey),
+                elevation: WidgetStatePropertyAll(2.0)
+              ),
+              child: const Text("Create",style: TextStyle(color: AppColors.textPrimaryBlack)),
               onPressed: () async {
                 final fullName = fullNameController.text.trim();
                 final email = emailController.text.trim();
@@ -545,10 +573,21 @@ class _StudentsTabState extends State<StudentsTab> {
             // Search field
             Expanded(
               child: TextField(
+                cursorColor: AppColors.bgPrimaryDarkGrey,
                 decoration: const InputDecoration(
                   hintText: 'Search students...',
+                  focusColor: AppColors.bgPrimaryDarkGrey,
                   prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFF303030),
+                    )
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFF303030),
+                    )
+                  ),
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -567,6 +606,7 @@ class _StudentsTabState extends State<StudentsTab> {
             const SizedBox(width: 8),
             // Sort
             PopupMenuButton<String>(
+              color: AppColors.bgPrimaryLightGrey,
               icon: const Icon(Icons.sort),
               onSelected: (value) {
                 setState(() {
@@ -663,9 +703,18 @@ class _StudentsTabState extends State<StudentsTab> {
                   final totalWordsToComplete = student['totalWordsToComplete'] ?? 0;
 
                   return Card(
+                    color: AppColors.bgPrimaryLightBlue,
                     margin: const EdgeInsets.symmetric(vertical: 8),
+                    elevation: 2,
+                    shape:RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      side: BorderSide(
+                        color: AppColors.buttonPrimaryGray,
+                        width: 1.0,
+                      )
+                    ),
                     child: ListTile(
-                      title: Text(student['fullName']),
+                      title: Text(student['fullName'],style: TextStyle(fontWeight: FontWeight.bold),),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -675,7 +724,7 @@ class _StudentsTabState extends State<StudentsTab> {
                           LinearProgressIndicator(
                             value: totalWordsToComplete == 0 ? 0 : countWordsCompleted / totalWordsToComplete,
                             minHeight: 8,
-                            backgroundColor: Colors.grey[300],
+                            backgroundColor: AppColors.bgPrimaryMidGrey,
                             color: Colors.green,
                           ),
                         ],

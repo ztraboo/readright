@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../utils/app_colors.dart';
 
 class TeacherWordDashboardPage extends StatefulWidget {
   const TeacherWordDashboardPage({super.key});
@@ -22,6 +23,7 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
     Colors.purple,
     Colors.teal,
     Colors.pink,
+    Colors.indigoAccent,
   ];
 
   final Map<String, Color> _levelColorMap = {};
@@ -55,17 +57,33 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Teacher Word Dashboard')),
+      appBar: AppBar(title: const Text('Teacher Word Dashboard',style: TextStyle(fontWeight: FontWeight.bold)),
+      elevation: 3.0,
+      backgroundColor: AppColors.bgPrimaryLightBlue,
+      ),
+      backgroundColor: AppColors.bgPrimaryWhite,
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
             // Search Field
             TextField(
+              cursorColor: AppColors.bgPrimaryDarkGrey,
               decoration: const InputDecoration(
+                focusColor: AppColors.bgPrimaryDarkGrey,
                 labelText: 'Search words',
+                labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
                 prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Color(0xFF303030),
+                  )
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Color(0xFF303030),
+                  )
+                ),
               ),
               onChanged: (value) {
                 setState(() {
@@ -110,7 +128,17 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
                         initialValue: _selectedLevel,
                         decoration: const InputDecoration(
                           labelText: 'Filter by Level',
-                          border: OutlineInputBorder(),
+                          labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0xFF303030),
+                            )
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0xFF303030),
+                            )
+                          ),
                         ),
                         items: levels
                             .map(
@@ -125,6 +153,7 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
                             _selectedLevel = value ?? 'All';
                           });
                         },
+                        dropdownColor: AppColors.bgPrimaryLightGrey,
                       );
                     },
                   ),
@@ -136,7 +165,17 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
                     initialValue: _selectedSort,
                     decoration: const InputDecoration(
                       labelText: 'Sort',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Color(0xFF303030),
+                        )
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Color(0xFF303030),
+                        )
+                      ),
                     ),
                     items: sortOptions
                         .map(
@@ -149,6 +188,7 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
                         _selectedSort = value ?? 'A-Z';
                       });
                     },
+                    dropdownColor: AppColors.bgPrimaryLightGrey,
                   ),
                 ),
               ],
@@ -215,6 +255,7 @@ class _TeacherWordDashboardPageState extends State<TeacherWordDashboardPage> {
 
                       //Make Cards
                       return Card(
+                        color: AppColors.bgPrimaryLightBlue,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

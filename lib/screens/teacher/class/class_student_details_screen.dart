@@ -53,6 +53,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
     Colors.purple,
     Colors.teal,
     Colors.pink,
+    Colors.indigoAccent,
   ];
 
   // Map Color to Level
@@ -290,14 +291,24 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
       length: 2, 
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Student Details'),
+          title: const Text('Student Details',style: TextStyle(fontWeight: FontWeight.bold)),
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.info_outline), text: 'Student Details'),
-              Tab(icon: Icon(Icons.menu_book_outlined), text: 'Word Progress'),
+              Tab(icon: Icon(Icons.info_outline,color: AppColors.buttonPrimaryGray), text: 'Student Details'),
+              Tab(icon: Icon(Icons.menu_book_outlined,color: AppColors.buttonPrimaryGray), text: 'Word Progress'),
             ],
+            unselectedLabelColor: AppColors.textPrimaryGray,
+            labelColor: AppColors.textPrimaryGray,
           ),
+          shape: Border(
+            bottom: BorderSide(
+              color: AppColors.buttonPrimaryGray,
+            ),
+          ),
+          elevation: 3,
+          backgroundColor: AppColors.bgPrimaryLightBlue,
         ),
+        backgroundColor: AppColors.bgPrimaryWhite,
         body: TabBarView(
           children: [
             // Student Details Tab
@@ -423,10 +434,23 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
 
                       // Search Field
                       TextField(
+                        cursorColor: AppColors.bgPrimaryDarkGrey,
                         decoration: const InputDecoration(
                           labelText: 'Search words',
+                          labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
+                          focusColor: AppColors.bgPrimaryDarkGrey,
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0xFF303030),
+                            )
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0xFF303030),
+                            )
+                          ),
                         ),
                         onChanged: (value) {
                           setState(() {
@@ -471,7 +495,17 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                   initialValue: _selectedLevel,
                                   decoration: const InputDecoration(
                                     labelText: 'Filter by Level',
-                                    border: OutlineInputBorder(),
+                                    labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF303030),
+                                      )
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF303030),
+                                      )
+                                    ),
                                   ),
                                   items: levels
                                       .map((level) => DropdownMenuItem(
@@ -485,6 +519,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                       _selectedLevel = value ?? 'All';
                                     });
                                   },
+                                  dropdownColor: AppColors.bgPrimaryLightGrey,
                                 );
                               },
                             ),
@@ -496,7 +531,17 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                               initialValue: _selectedSort,
                               decoration: const InputDecoration(
                                 labelText: 'Sort',
-                                border: OutlineInputBorder(),
+                                labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Color(0xFF303030),
+                                  )
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Color(0xFF303030),
+                                  )
+                                ),
                               ),
                               items: sortOptions
                                   .map((s) =>
@@ -508,6 +553,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                   _selectedSort = value ?? 'A-Z';
                                 });
                               },
+                              dropdownColor: AppColors.bgPrimaryLightGrey,
                             ),
                           ),
                         ],
@@ -572,6 +618,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                 final level = word['level'];
 
                                 return Card(
+                                  color: AppColors.bgPrimaryLightBlue,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
