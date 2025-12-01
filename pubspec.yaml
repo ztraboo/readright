@@ -75,6 +75,9 @@ dependencies:
   csv: ^6.0.0
   share_plus: ^12.0.0
 
+  # Open About link
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

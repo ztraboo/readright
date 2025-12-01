@@ -50,7 +50,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
           );
         } else {
           debugPrint('TeacherDashboardPage: No existing user session found.');
-        } 
+        }
 
         _classSection = context.read<CurrentUserModel>().classSection;
 
@@ -191,6 +191,18 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Teacher Dashboard',style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+                icon: const Icon(Icons.account_circle, color: AppColors.buttonPrimaryGray),
+                onPressed: () {
+                  debugPrint("Icon Pressed");
+                  Navigator.pushNamed(
+                    context,
+                    '/profile-settings',
+                  );
+                }
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.people,color: AppColors.buttonPrimaryGray), text: 'Students',),

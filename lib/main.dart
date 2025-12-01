@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:readright/models/current_user_model.dart';
+import 'package:readright/screens/profile_screen.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
 import 'package:readright/services/student_progress_repository.dart';
@@ -236,6 +237,7 @@ class ReadRightApp extends StatelessWidget {
         '/teacher-dashboard': (context) => const TeacherDashboardPage(),
         '/teacher-word-dashboard': (context) =>  TeacherWordDashboardPage(),
         '/class-dashboard': (context) => const ClassDashboard(),
+        '/profile-settings': (context) => const ProfilePage(),
 //        '/class-student-details': (context) => const ClassStudentDetails(),
       },
       debugShowCheckedModeBanner: false,
