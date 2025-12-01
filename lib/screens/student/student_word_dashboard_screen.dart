@@ -194,9 +194,25 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 90),
-                const Text(
-                  'Dashboard',
-                  style: AppStyles.headerText,
+                Row(
+                  children: [
+                    const Text(
+                      'Dashboard',
+                      style: AppStyles.headerText,
+                    ),
+                    const Spacer(),
+                    IconButton(
+                        icon: const Icon(Icons.account_circle, color: AppColors.buttonPrimaryGray),
+                        iconSize: 36, 
+                        onPressed: () {
+                          debugPrint("Icon Pressed");
+                          Navigator.pushNamed(
+                            context,
+                            '/profile-settings',
+                          );
+                        }
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 22),
                 Container(

@@ -292,6 +292,18 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Student Details',style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+                icon: const Icon(Icons.account_circle, color: AppColors.buttonPrimaryGray),
+                onPressed: () {
+                  debugPrint("Icon Pressed");
+                  Navigator.pushNamed(
+                    context,
+                    '/profile-settings',
+                  );
+                }
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.info_outline,color: AppColors.buttonPrimaryGray), text: 'Student Details'),
