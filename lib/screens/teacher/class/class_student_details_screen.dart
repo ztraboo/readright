@@ -151,7 +151,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
               ),
           Text(
               attemptData['score'] != null
-                  ? 'Score = ${(attemptData['score'] as num).toStringAsFixed(2)}'
+                  ? 'Score = ${((attemptData['score'] as num) * 100).toStringAsFixed(0)}%'
                   : 'No attempt',              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
@@ -281,6 +281,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
       'averageWordAttemptScore': studentData['averageWordAttemptScore'] ?? 0.0,
       'wordStruggledIds': wordStruggledIds,
       'totalWordsToComplete': classData['totalWordsToComplete'] ?? 0,
+      'wordCompletedIds': List<String>.from(studentData['wordCompletedIds'] ?? []),
     };
   }
 
@@ -470,13 +471,15 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                   .snapshots(),
                               builder: (context, snapshot) {
                                 // Build Level List
-                                List<String> levels = ['All'];
+                                List<String> levels = [
+                                  'All',
+                                  'Completed',
+                                  'Not Completed'
+                                ];
                                 if (snapshot.hasData) {
                                   levels.addAll(snapshot.data!.docs
                                       .map((doc) =>
-                                          (doc.data()
-                                                  as Map<String, dynamic>)['level']
-                                              .toString())
+                                          (doc.data() as Map<String, dynamic>)['level'].toString())
                                       .toSet()
                                       .toList()
                                     ..sort((a, b) {
@@ -486,7 +489,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                       return indexA.compareTo(indexB);
                                     }));
                                 }
-
+                                
                                 if (!levels.contains(_selectedLevel)) {
                                   _selectedLevel = 'All';
                                 }
@@ -494,7 +497,7 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                                 return DropdownButtonFormField<String>(
                                   initialValue: _selectedLevel,
                                   decoration: const InputDecoration(
-                                    labelText: 'Filter by Level',
+                                    labelText: 'Filters',
                                     labelStyle: TextStyle(color: AppColors.bgPrimaryDarkGrey),
                                     focusedBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
@@ -584,15 +587,25 @@ class _ClassStudentDetailsState extends State<ClassStudentDetails> {
                             // Apply Search & Level Filter
                             List<Map<String, dynamic>> filteredWords =
                                 allWords.where((word) {
-                              final matchesSearch = word['text']
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains(_searchText.toLowerCase());
+                                final matchesSearch = word['text']
+                                    .toString()
+                                    .toLowerCase()
+                                    .contains(_searchText.toLowerCase());
 
-                              final matchesLevel = _selectedLevel == 'All' ||
-                                  word['level'] == _selectedLevel;
+                                final completedIds = data['wordCompletedIds'] as List<String>;
+                                final isCompleted = completedIds.contains(word['id']);
 
-                              return matchesSearch && matchesLevel;
+                                bool matchesLevel = true;
+
+                                if (_selectedLevel == 'Completed') {
+                                  matchesLevel = isCompleted;
+                                } else if (_selectedLevel == 'Not Completed') {
+                                  matchesLevel = !isCompleted;
+                                } else if (_selectedLevel != 'All') {
+                                  matchesLevel = word['level'] == _selectedLevel;
+                                }
+
+                                return matchesSearch && matchesLevel;
                             }).toList();
 
                             // Apply sorting
