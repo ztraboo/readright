@@ -51,17 +51,17 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             const SizedBox(height: 20),
             Text(
-              "Username: ${_currentUser!.username}",
+              "Username: ${_currentUser?.username ?? 'Unknown'}",
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
             Text(
-              "Name: ${_currentUser!.username}",
+              "Name: ${_currentUser?.username ?? 'Unknown'}",
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
             Text(
-              "Email: ${_currentUser!.email}",
+              "Email: ${_currentUser?.email ?? 'Unknown'}",
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
