@@ -113,8 +113,25 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
-        // setState(() {
-          // practiceWord = args['practiceWord'] as WordModel?;
+        final retryWord = args['retryWord'] as bool? ?? false;
+        if (retryWord == true){
+          setState(() {
+            wordLevel = args['wordLevel'] as WordLevel?;
+            practiceWord = args['practiceWord'] as WordModel?;
+
+            // Handle the header TTS.
+            // We're only calling this here to ensure it runs after initial state setup.
+            // This will not be called again if the user traverse from
+            // the student feedback screen back to this practice screen.
+            _handleIntroductionTts();
+
+            // Execute this line only if there is no network
+            if (online == false){
+              _startSTTAccessor();
+            }
+          });
+        } else {
+          // Fetch the next practice word for the user
           context
             .read<CurrentUserModel>()
             .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (nextWord){ 
@@ -135,9 +152,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
                 practiceWord = nextWord;
 
-                // Fetch a new sentence for the practice word.
-                // fetchNewWordSentence();
-
                 // Handle the header TTS.
                 // We're only calling this here to ensure it runs after initial state setup.
                 // This will not be called again if the user traverse from
@@ -150,11 +164,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                 }
               });
             });
-        // });
+        }
+
       } else if (args is Map) {
-        // setState(() {
-          // practiceWord = args['practiceWord'] as WordModel?;
-          // wordLevel = args['wordLevel'] as WordLevel?;
           context
             .read<CurrentUserModel>()
             .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (nextWord){ 
@@ -177,7 +189,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   }
                 });
             });
-        // });
       }
 
       if (wordLevel != null && practiceWord != null) {
@@ -198,64 +209,13 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         }
       });
 
-      // if (practiceWord != null) {
-          // Fetch a new sentence for the practice word.
-          // fetchNewWordSentence();
-
-          // Handle the header TTS.
-          // We're only calling this here to ensure it runs after initial state setup.
-          // This will not be called again if the user traverse from
-          // the student feedback screen back to this practice screen.
-          // _handleIntroductionTts();
-
         // Initialize the PCM player now. The recorder will manage microphone
         // permission and initialize itself on start().
         _initPCMPlayer();
 
         // Initialize the PCM recorder if not already initialized
         _initPCMRecorder();
-
-        // Start listening to the assessor stream after recorder is started.
-        // This avoids an issue with the UI stop counter not updating if the
-        // recorder is started/stopped multiple times.
-
-        // // Execute this line only if there is no network
-        // if (online == false){
-        //   _startSTTAccessor();
-        // }
-      // }
-
     });
-
-    // if (practiceWord != null) {
-    // Initialize the PCM player now. The recorder will manage microphone
-    // permission and initialize itself on start().
-    // _initPCMPlayer();
-
-    // Initialize the PCM recorder if not already initialized
-    // _initPCMRecorder();
-
-    // Check to see if the recorder has permissions for the microphone.
-    // checkRecorderPermission();
-
-      // Start listening to the assessor stream after recorder is started.
-      // This avoids an issue with the UI stop counter not updating if the
-      // recorder is started/stopped multiple times.
-
-      // Execute this line only if there is no network
-      // if (online == false){
-      //   _startSTTAccessor();
-      // }
-    // }
-
-    // // Fetch a new sentence for the practice word.
-    // fetchNewWordSentence();
-
-    // // Handle the header TTS.
-    // // We're only calling this here to ensure it runs after initial state setup.
-    // // This will not be called again if the user traverse from
-    // // the student feedback screen back to this practice screen.
-    // _handleIntroductionTts();
   }
 
   // Initialize the PCM player now. The recorder will manage microphone permission.
@@ -944,7 +904,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     if (!_isRecording && !_isProcessingRecording) {
       Future.microtask(() async {
         // Ensure the prompt audio plays first, then the word audio.
-        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}can_you_pronounce_the_word_below.mp3');
+        await _handleTts(assetPath: '${AppConstants.assetPathPhrases}can_you_pronounce_this_word.mp3');
         // await _handleTts(assetPath: '${AppConstants.assetPathWords}${practiceWord?.text.trim().toLowerCase()}.mp3');
         // await _handleTts(assetPath: '${AppConstants.assetPathSentences}${practiceWord?.text.trim().toLowerCase()}_${practiceSentenceId}.mp3');
         await _handleTts(assetPath: '${AppConstants.assetPathPhrases}click_the_record_button_to_get_started.mp3');
@@ -971,7 +931,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             SizedBox(
               width: 380,
               child: Text(
-                "Can you pronounce the word below?",
+                "Can you pronounce this word?",
                 textAlign: TextAlign.center,
                 style: AppStyles.subheaderText
               ),
