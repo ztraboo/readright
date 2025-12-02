@@ -8,7 +8,7 @@ Additional documentation and features will be added in separate pages:
 - [README (Milestone 1)](./docs/milestone1/README_Milestone1.md) - Foundation & Vertical Slice (MVP)
 - [README (Milestone 2)](./docs/milestone2/README_Milestone2.md) - Cloud Scoring + Teacher Tools
 - [README (Milestone 3)](./docs/milestone3/README_Milestone3.md) - Audio Retention + Analytics + Hardening
-- [README (Final Delivery)](./docs/milestoneFinal/README_milestoneFinal.md) - Release 1.0 + Polish & Documentation
+- [README (Final Delivery)](./docs/milestoneFinal/README_MilestoneFinal.md) - Release 1.0 + Polish & Documentation
 
 ## Getting Started
 
