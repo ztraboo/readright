@@ -28,14 +28,14 @@ enum WordLevelState {
 }
 
 enum WordLevel {
+  custom,
   prePrimer,
   primer,
   firstGrade,
   secondGrade,
   thirdGrade,
   fourthGrade,
-  fifthGrade,
-  custom
+  fifthGrade
 }
 
 extension WordCategoryExtension on WordLevel {
@@ -83,6 +83,16 @@ WordLevel wordLevelFromString(String level) {
 // This should return levels by there increasing difficulty/order.
 List<WordLevel> fetchWordLevelsIncreasingDifficultyOrder() {
   return WordLevel.values;
+}
+
+// Next word level in sequence, or null if at the last level.
+WordLevel? nextWordLevel(WordLevel currentLevel) {
+  final levels = fetchWordLevelsIncreasingDifficultyOrder();
+  final currentIndex = levels.indexOf(currentLevel);
+  if (currentIndex >= 0 && currentIndex < levels.length - 1) {
+    return levels[currentIndex + 1];
+  }
+  return null;
 }
 
 /// Enumeration for different users.

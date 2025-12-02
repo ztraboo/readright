@@ -117,12 +117,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           // practiceWord = args['practiceWord'] as WordModel?;
           context
             .read<CurrentUserModel>()
-            .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (onValue){ 
+            .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (nextWord){ 
               setState(() {
                 wordLevel = args['wordLevel'] as WordLevel?;
 
                 // Go to the student word level completed page if no practice word is available
-                if (onValue == null && wordLevel != context.read<CurrentUserModel>().currentWordLevel) {
+                if (wordLevel != context.read<CurrentUserModel>().currentWordLevel) {
                   Navigator.of(context).pushReplacementNamed(
                     '/student-word-level-completed',
                     arguments: {
@@ -133,7 +133,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   return;
                 }
 
-                practiceWord = onValue;
+                practiceWord = nextWord;
 
                 // Fetch a new sentence for the practice word.
                 // fetchNewWordSentence();
@@ -157,10 +157,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           // wordLevel = args['wordLevel'] as WordLevel?;
           context
             .read<CurrentUserModel>()
-            .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (onValue){ 
+            .fetchUsersNextPracticeWord(args['wordLevel'] as WordLevel).then( (nextWord){ 
                 setState(() {
                   wordLevel = args['wordLevel'] as WordLevel?;
-                  practiceWord = onValue;
+                  practiceWord = nextWord;
 
                   // Fetch a new sentence for the practice word.
                   // fetchNewWordSentence();
@@ -179,7 +179,12 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             });
         // });
       }
-      debugPrint('StudentWordPracticePage: ${practiceWord?.text}, Word Level: ${wordLevel?.name}');
+
+      if (wordLevel != null && practiceWord != null) {
+        debugPrint('StudentWordPracticePage: Initialized with practiceWord: ${practiceWord!.text}, wordLevel: ${wordLevel!.name}');
+      } else {
+        debugPrint('StudentWordPracticePage: No practiceWord or wordLevel provided in arguments.');
+      }
 
       setState(() {
         _currentUser = context.read<CurrentUserModel>().user;

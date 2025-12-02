@@ -10,19 +10,11 @@ class StudentProgressModel {
   /// Average score for the student (e.g. 92.0)
   final double averageWordAttemptScore;
 
-  WordLevel? get currentWordLevel {
-    // Determine current word level based on completed levels.
-    for (final level in fetchWordLevelsIncreasingDifficultyOrder()) {
-      final completed = wordLevelsCompleted[level] ?? false;
-      if (!completed) {
-        return level;
-      }
-    }
-    return null; // All levels completed
-  }
+  /// Current word level the student is on.
+  WordLevel? currentWordLevel;
 
   /// Mapping WordLevel and whether the level has been completed.
-  final Map<WordLevel, bool> wordLevelsCompleted = const <WordLevel, bool>{};
+  Map<WordLevel, bool> wordLevelsCompleted;
 
   /// Internal list of Attempt IDs (AttemptModel document IDs). When serialized to Firestore this
   /// is stored as a list of AttemptModel.id strings (document references).
@@ -48,14 +40,15 @@ class StudentProgressModel {
 
   StudentProgressModel({
     this.averageWordAttemptScore = 0.0,
-    WordLevel? currentWordLevel,
+    this.currentWordLevel,
     Map<WordLevel, bool>? wordLevelsCompleted,
     List<String>? wordAttemptIds,
     List<String>? wordStruggledIds,
     this.countWordsAttempted = 0,
     required this.uid,
     List<String>? wordCompletedIds,
-  })  : wordAttemptIds = wordAttemptIds ?? const <String>[],
+  })  : wordLevelsCompleted = wordLevelsCompleted ?? const <WordLevel, bool>{},
+        wordAttemptIds = wordAttemptIds ?? const <String>[],
         wordStruggledIds = wordStruggledIds ?? const <String>[],
         _wordsCompleted = Set<String>.from(wordCompletedIds ?? const <String>[]);
 
@@ -90,12 +83,11 @@ class StudentProgressModel {
         ? totalScore / (countWordsAttempted + 1)
         : 0.0;
 
-    return StudentProgressModel(
+    return copyWith(
       averageWordAttemptScore: newAverageWordAttemptScore,
       wordAttemptIds: newAttempts,
-      wordStruggledIds: List<String>.from(struggledIds),
+      wordsStruggled: struggledIds,
       countWordsAttempted: countWordsAttempted + 1,
-      uid: uid,
       wordCompletedIds: newCompleted.toList(),
     );
   }
@@ -108,7 +100,8 @@ class StudentProgressModel {
     return {
       'wordAttemptIds': wordAttemptIds,
       'currentWordLevel': currentWordLevel?.name,
-      'wordLevelsCompleted': wordLevelsCompleted.map((key, value) => MapEntry(key.name, value)),
+      'wordLevelsCompleted': wordLevelsCompleted
+        .map<String, dynamic>((key, value) => MapEntry(key.name, value)),
       'averageWordAttemptScore': averageWordAttemptScore,
       'countWordsAttempted': countWordsAttempted,
       'countWordsCompleted': countWordsCompleted,

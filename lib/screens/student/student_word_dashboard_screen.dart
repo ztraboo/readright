@@ -175,7 +175,7 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 280,
+      height: 282,
       color: AppColors.bgPrimaryGray,
       child: Stack(
         children: [
@@ -224,7 +224,7 @@ class _StudentWordDashboardPageState extends State<StudentWordDashboardPage> {
                     border: Border.all(color: Colors.black, width: 1),
                   ),
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 20),
                 const SizedBox(
                   width: 223,
                   child: Text(

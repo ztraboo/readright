@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/current_user_model.dart';
 import '../../models/user_model.dart';
@@ -23,6 +24,8 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final UserModel? userModel;
   bool isVerifyingExistingLoginSession = true;
+
+  late final SharedPreferences prefs;
 
   @override
   void initState() {
@@ -72,7 +75,11 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
     );
   }
 
-  void checkUserRoleAccess() {
+  void checkUserRoleAccess() async {
+
+    // Grab SharedPreferences instance
+    prefs = await SharedPreferences.getInstance();
+
     // Perform an additional check to ensure that this is not a
     // student user logged in. We only want students.
     switch (userModel!.role) {
@@ -101,7 +108,25 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
 
         break;
       case UserRole.student:
-        navigateToDashboard();
+        if (prefs.getBool('showStudentWordDashboardScreen') == true) {
+          navigateToDashboard();  
+        } else {
+          // ignore: use_build_context_synchronously
+          final currentLevel = context.read<CurrentUserModel>().currentWordLevel ?? fetchWordLevelsIncreasingDifficultyOrder().first;
+          debugPrint('StudentLoginPage: Navigating to word practice screen for level: ${currentLevel.name}');
+
+          Navigator.pushNamedAndRemoveUntil(
+            // ignore: use_build_context_synchronously
+            context,
+            '/student-word-practice',
+            (Route<dynamic> route) => false,
+            arguments: {
+              // 'practiceWord': practiceWord,
+              'wordLevel': wordLevelFromString(currentLevel.name),
+            },
+          );
+        }
+        
         break;
     }
 

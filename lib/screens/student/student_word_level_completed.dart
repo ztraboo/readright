@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/models/word_model.dart';
+import 'package:readright/services/student_progress_repository.dart';
 import 'package:readright/utils/app_colors.dart';
 import 'package:readright/utils/app_constants.dart';
 import 'package:readright/utils/app_styles.dart';
@@ -27,6 +28,7 @@ class _StudentWordLevelCompletedPageState extends State<StudentWordLevelComplete
 
   UserModel? _currentUser;
   WordLevel? wordLevel;
+  WordLevel? nextWordLevel;
   WordModel? nextPracticeWord;
 
   late final AnimationController _controller;
@@ -43,13 +45,14 @@ class _StudentWordLevelCompletedPageState extends State<StudentWordLevelComplete
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
         setState(() {
-          wordLevel = args['wordLevel'] as WordLevel? ?? WordLevel.prePrimer;
+          wordLevel = args['wordLevel'] as WordLevel?;
+          nextWordLevel = args['nextWordLevel'] as WordLevel?;
           nextPracticeWord = args['nextPracticeWord'] as WordModel?;
 
           _currentUser = context.read<CurrentUserModel>().user;
 
           if (_currentUser != null) {
-            debugPrint('StudentWordLevelCompletedPage: User UID: ${_currentUser!.id}, Username: ${_currentUser?.username}, Email: ${_currentUser!.email}, Role: ${_currentUser?.role.name}');
+            debugPrint('StudentWordLevelCompletedPage: User UID: ${_currentUser!.id}, Username: ${_currentUser?.username}, Email: ${_currentUser!.email}, Role: ${_currentUser?.role.name}');            
           } else {
             debugPrint('StudentWordLevelCompletedPage: No persisted user found.');
           }
@@ -134,11 +137,11 @@ class _StudentWordLevelCompletedPageState extends State<StudentWordLevelComplete
           if (duration != null) {
             stopTimer = Timer(duration, () async {
               try {
-          await player.stopPlayer();
+                await player.stopPlayer();
               } catch (stopErr) {
-          debugPrint('StudentWordLevelCompletedPage: Error stopping player after duration: $stopErr');
+                debugPrint('StudentWordLevelCompletedPage: Error stopping player after duration: $stopErr');
               } finally {
-          if (!completer.isCompleted) completer.complete();
+                if (!completer.isCompleted) completer.complete();
               }
             });
           }
@@ -149,11 +152,11 @@ class _StudentWordLevelCompletedPageState extends State<StudentWordLevelComplete
             if (!mounted) {
               t.cancel();
               try {
-          await player.stopPlayer();
+                await player.stopPlayer();
               } catch (stopErr) {
-          debugPrint('StudentWordLevelCompletedPage: Error stopping player during dispose: $stopErr');
+                debugPrint('StudentWordLevelCompletedPage: Error stopping player during dispose: $stopErr');
               } finally {
-          if (!completer.isCompleted) completer.complete();
+                  if (!completer.isCompleted) completer.complete();
               }
             }
           });
@@ -325,24 +328,24 @@ class _StudentWordLevelCompletedPageState extends State<StudentWordLevelComplete
                       : Expanded(
                       child: GestureDetector(
                         onTap: () {
-                          // If caller provided a nextPracticeWord object, navigate directly to practice.
-                          if (nextPracticeWord != null) {
-                            Navigator.pushNamed(
+                          // Stop audio playing
+                          // Stop animations/confetti and replace this route so Flutter disposes it.
+                          // Do NOT call dispose() manually.
+                          try { _confettiController.stop(); } catch (_) {}
+                          try { _controller.stop(); _controller.reset(); } catch (_) {}
+
+                          // Replace the current page with the practice page (this will trigger dispose())
+                          Future.delayed(const Duration(seconds: 1), () {
+                            if (!mounted) return;
+                            Navigator.pushReplacementNamed(
                               context,
                               '/student-word-practice',
                               arguments: {
-                                'practiceWord': nextPracticeWord,
-                                'wordLevel': wordLevel,
+                                'wordLevel': nextWordLevel,
                               },
                             );
-                          } else {
-                            // Fallback: go to dashboard where user can pick next list.
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/student-word-dashboard',
-                              (Route<dynamic> route) => false,
-                            );
-                          }
+                          });
+                          return;
                         },
                         child: Container(
                           height: 56,
