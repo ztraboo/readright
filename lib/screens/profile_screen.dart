@@ -44,6 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text("Profile"),
         backgroundColor: AppColors.bgPrimaryLightBlue,
       ),
+      backgroundColor: AppColors.bgPrimaryWhite,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
