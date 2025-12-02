@@ -54,17 +54,23 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   void initState() {
     super.initState();
+
+    _loadSharedPreferences();
+
     // Run init after the first frame to keep startup fast.
     WidgetsBinding.instance.addPostFrameCallback((_) => _initOnce());
+
+  }
+
+  Future<void> _loadSharedPreferences() async {
+    _prefs = await SharedPreferences.getInstance();
+    _prefs.setBool('showStudentWordDashboardScreen', false);
+    debugPrint('SharedPreferences initialized');
   }
 
   Future<void> _initOnce() async {
     if (_initialized) return;
     _initialized = true;
-
-    // Initialize SharedPreferences
-    _prefs = await SharedPreferences.getInstance();
-    _prefs.setBool('showStudentWordDashboardScreen', false);
 
     try {
       await Firebase.initializeApp(

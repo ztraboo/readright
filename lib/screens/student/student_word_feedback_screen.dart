@@ -173,6 +173,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         arguments: {
           'practiceWord': practiceWord,
           'wordLevel': wordLevel,
+          'retryWord': true,
         });
   }
 
@@ -356,25 +357,64 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 210,
+      height: 214,
       color: AppColors.bgPrimaryGray,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            const SizedBox(
-              width: 380,
-              child: Text(
-                "Let's see how you did for the word",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'SF Compact Display',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                  height: 1.1,
-                ),
+            SizedBox(
+              width: 400,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                      icon: Icon(Icons.account_circle, color: (_isIntroductionTtsPlaying) ? AppColors.bgPrimaryDarkGrey.withOpacity(0.5) : AppColors.buttonPrimaryGray),
+                      onPressed: () {
+                        if (!_isIntroductionTtsPlaying) {
+                          debugPrint("Icon Pressed - navigating to profile settings.");
+                          Navigator.pushNamed(
+                            context,
+                            '/profile-settings',
+                          );
+                          return;
+                        } else {
+                          debugPrint("Icon Pressed during TTS playback - ignoring.");
+                        }
+                      }
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 400,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Let's see how you did for the word",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'SF Compact Display',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                      height: 1.1,
+                    ),
+                  ),
+                  // const SizedBox(width: 5),
+                  // IconButton(
+                  //     icon: const Icon(Icons.account_circle, color: AppColors.buttonPrimaryGray),
+                  //     onPressed: () {
+                  //       debugPrint("Icon Pressed");
+                  //       Navigator.pushNamed(
+                  //         context,
+                  //         '/profile-settings',
+                  //       );
+                  //     }
+                  // ),
+                ],
               ),
             ),
             const SizedBox(height: 10),
