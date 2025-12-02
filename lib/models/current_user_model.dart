@@ -178,6 +178,9 @@ class CurrentUserModel extends ChangeNotifier {
 
         if (studentProgress?.currentWordLevel != null) {
           currentWordLevel = studentProgress!.currentWordLevel;
+        } else {
+          debugPrint('CurrentUserModel: No current word level found for student ${_user!.username}, defaulting to Pre-Primer.');
+          currentWordLevel = fetchWordLevelsIncreasingDifficultyOrder().first;
         }
 
         final levelsCompleted = studentProgress?.wordLevelsCompleted;
