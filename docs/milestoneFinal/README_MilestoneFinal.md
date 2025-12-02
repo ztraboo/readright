@@ -72,6 +72,17 @@ The sections below retain the original Milestone 1 descriptions and call out **M
   - When the student passes the score threshold they are not presented with a RETRY option.
   - The next button is always available should the student want to go on to the next practice word. This prevents the learner from being locked down on a given word should it be hard to pronounce. Difficult words are saved in the database for later retrieval/retry again.
 
+## Final Milestone - Theme: Release 1.0 + Polish & Documentation
+- Added Documentation
+  - Teacher Quick Start:
+  - Setup Guide:
+  - Data Model Diagram:
+- Updated UI for Teacher Pages to better fit Student side
+- Edited Student Workflow based on feedback such as removing the Student Dashboard
+- Added Profile Page for Sign Out functionality
+- Added Test data
+- Fixed misc bugs
+
 ## 🚀 Application Flow
 > Please refer to the [Mobile Screens](#mobile-screens) section below to see the actual interface.
 
