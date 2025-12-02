@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 // import 'package:readright/utils/firestore_utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:readright/models/current_user_model.dart';
 import 'package:readright/screens/profile_screen.dart';
 import 'package:readright/services/attempt_repository.dart';
@@ -47,6 +49,7 @@ class AppInitializer extends StatefulWidget {
 
 class _AppInitializerState extends State<AppInitializer> {
   bool _initialized = false;
+  late SharedPreferences _prefs;
 
   @override
   void initState() {
@@ -58,6 +61,10 @@ class _AppInitializerState extends State<AppInitializer> {
   Future<void> _initOnce() async {
     if (_initialized) return;
     _initialized = true;
+
+    // Initialize SharedPreferences
+    _prefs = await SharedPreferences.getInstance();
+    _prefs.setBool('showStudentWordDashboardScreen', false);
 
     try {
       await Firebase.initializeApp(
@@ -115,7 +122,7 @@ class _AppInitializerState extends State<AppInitializer> {
             return;
           }
           // ignore: use_build_context_synchronously
-          context.read<CurrentUserModel>().logIn(currentUser);
+          await context.read<CurrentUserModel>().logIn(currentUser);
           debugPrint('User document fetched for uid=${firebaseUser.uid}');
         } catch (e, st) {
           debugPrint('Failed to fetch current user on auth state change: $e\n$st');
@@ -124,7 +131,7 @@ class _AppInitializerState extends State<AppInitializer> {
         // Ensure no user is signed in at app start
         // This is for testing purposes to avoid persisting sessions across app restarts.
         // ignore: use_build_context_synchronously
-        // context.read<CurrentUserModel>().logOut();
+        // await context.read<CurrentUserModel>().logOut();
       });
 
       // Manually upload seed words from asset on app start

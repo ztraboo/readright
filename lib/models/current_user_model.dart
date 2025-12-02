@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:readright/models/attempt_model.dart';
 import 'package:readright/models/class_model.dart';
+import 'package:readright/models/student_progress_model.dart';
 import 'package:readright/models/user_model.dart';
 import 'package:readright/models/word_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
+import 'package:readright/services/student_progress_repository.dart';
 import 'package:readright/services/user_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import 'package:readright/utils/app_scoring.dart';
@@ -36,15 +38,81 @@ class CurrentUserModel extends ChangeNotifier {
   WordLevel? _currentWordLevel;
   WordLevel? get currentWordLevel => _currentWordLevel;
   set currentWordLevel(WordLevel? level) {
-    _currentWordLevel = level;
-    notifyListeners();
+    if (_currentWordLevel != level) {
+      debugPrint('CurrentUserModel: Changing current word level from ${_currentWordLevel?.name} to ${level?.name}');
+
+      _currentWordLevel = level;
+
+      if (level != null) {
+        debugPrint('CurrentUserModel: Current word level set to ${level.name}');
+        updateCurrentWordLevel();
+      } else {
+        debugPrint('CurrentUserModel: Current word level set to null');
+      }
+
+      notifyListeners();
+    }
+  }
+  void updateCurrentWordLevel() async {
+    if (_currentWordLevel == null || user == null) {
+      debugPrint('CurrentUserModel: Cannot update student progress, level or user is null.');
+      return;
+    }
+
+    await StudentProgressRepository().fetchProgressByUid(user!.id as String).then((progress) async {
+      if (progress != null) {
+        // Update only the currentWordLevel field
+        progress = progress.copyWith(
+          currentWordLevel: _currentWordLevel
+        );
+
+        await StudentProgressRepository().upsertProgress(progress);
+        debugPrint('CurrentUserModel: Updated student progress with new current word level ${_currentWordLevel?.name}');
+      } else {
+        debugPrint('CurrentUserModel: No existing student progress found for user ${user?.id}, cannot update current word level.');
+      }
+    }).catchError((e) {
+      debugPrint('CurrentUserModel: Error updating student progress for user ${user?.id}: $e');
+    });
   }
 
   Map<WordLevel, bool> _wordLevelsCompleted = {};
   Map<WordLevel, bool> get wordLevelsCompleted => _wordLevelsCompleted;
   set wordLevelsCompleted(Map<WordLevel, bool> levelsCompleted) {
     _wordLevelsCompleted = levelsCompleted;
+
+    if (levelsCompleted.isNotEmpty) {
+      debugPrint('CurrentUserModel: Word levels completed updated: ${levelsCompleted.keys.map((e) => e.name).join(', ')}');
+      updateWordLevelsCompleted();
+    } else {
+      debugPrint('CurrentUserModel: Word levels completed set to empty.');
+    }
+
     notifyListeners();
+  }
+
+  // TODO: Need to revisit why this is not saving properly to the Firestore document.
+  void updateWordLevelsCompleted() async {
+    if (user == null) {
+      debugPrint('CurrentUserModel: Cannot update student progress, user is null.');
+      return;
+    }
+
+    await StudentProgressRepository().fetchProgressByUid(user!.id as String).then((progress) async {
+      if (progress != null) {
+        // Update only the wordLevelsCompleted field
+        progress = progress.copyWith(
+          wordLevelsCompleted: _wordLevelsCompleted,
+        );
+
+        await StudentProgressRepository().upsertProgress(progress);
+        debugPrint('CurrentUserModel: Updated student progress with new current word level ${_currentWordLevel?.name}');
+      } else {
+        debugPrint('CurrentUserModel: No existing student progress found for user ${user?.id}, cannot update current word level.');
+      }
+    }).catchError((e) {
+      debugPrint('CurrentUserModel: Error updating student progress for user ${user?.id}: $e');
+    });
   }
 
   List<AttemptModel> _wordAttempts = [];
@@ -57,7 +125,7 @@ class CurrentUserModel extends ChangeNotifier {
 
   bool get isLoggedIn => _user != null;
 
-  void logIn(UserModel? userModel) async {
+  Future<void> logIn(UserModel? userModel) async {
     if (userModel == null) {
       debugPrint('CurrentUserModel: User is null, cannot log in.');
       return;
@@ -103,6 +171,19 @@ class CurrentUserModel extends ChangeNotifier {
           _user?.id as String,
           classId: _classSection?.id ?? 'Unknown',
         );
+
+        // Load student progress to set current word level and completed levels
+        // ignore: use_build_context_synchronously
+        final studentProgress = await StudentProgressRepository().fetchProgressByUid(userModel.id as String);
+
+        if (studentProgress?.currentWordLevel != null) {
+          currentWordLevel = studentProgress!.currentWordLevel;
+        }
+
+        final levelsCompleted = studentProgress?.wordLevelsCompleted;
+        if (levelsCompleted != null && levelsCompleted.isNotEmpty) {
+          wordLevelsCompleted = levelsCompleted;
+        }
         break;
       default:
         debugPrint('CurrentUserModel: Logged in with unknown role for user ${_user!.username}');
@@ -111,7 +192,7 @@ class CurrentUserModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void logOut() {
+  Future<void> logOut() async{
     if (_user != null) {
       debugPrint('CurrentUserModel: Logging out username ${_user!.username}), email ${_user!.email}');
       UserRepository().signOutCurrentUser();
@@ -119,6 +200,9 @@ class CurrentUserModel extends ChangeNotifier {
 
     _user = null;
     _classSection = null;
+    _currentWordLevel = null;
+    _wordLevelsCompleted = {};
+    _wordAttempts = [];
     notifyListeners();
   }
   
@@ -143,7 +227,10 @@ class CurrentUserModel extends ChangeNotifier {
 
     try {
       // Update the current word level in the model
-      currentWordLevel = wordLevel;
+      if (currentWordLevel != wordLevel) {
+        debugPrint('CurrentUserModel: Updating current word level to ${wordLevel.name} for next practice word fetch.');
+        currentWordLevel = wordLevel;
+      }
 
       // Make sure that attempts are up to date. This ensures that we have the latest data when 
       // calculating the next practice word.
@@ -199,13 +286,12 @@ class CurrentUserModel extends ChangeNotifier {
 
                 currentWordLevel = nextLevel;
 
-                // return await fetchUsersNextPracticeWord(nextLevel);
-                return null;
+                return await fetchUsersNextPracticeWord(nextLevel);
             } else {
                 // No further levels, return null.
                 debugPrint('CurrentUserModel: Level ${wordLevel.name} completed. No further levels.');
 
-                currentWordLevel = null;
+                // currentWordLevel = null;
                 
                 return null;
             }

@@ -77,7 +77,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               onPressed: () async {
                 try {
-                  context.read<CurrentUserModel>().logOut();
+                  await context.read<CurrentUserModel>().logOut();
                   debugPrint('Successfully called logOut');
                 } catch (e, st) {
                   debugPrint('Failed to log out: $e\n$st');

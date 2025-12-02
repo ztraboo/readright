@@ -315,18 +315,6 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     super.dispose();
   }
 
-  void _handleWordLevelCompleted() {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/student-word-level-completed',
-      (Route<dynamic> route) => false,
-      arguments: {
-        'currentWordLevel': wordLevel,
-        'nextWordLevel': context.read<CurrentUserModel>().currentWordLevel,
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -847,28 +835,16 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         )
       : GestureDetector(
       onTap: () async {
-        // Fetch the next word for the user at the current word level.
-        // TODO: Need to put this in the init() method and store 
-        // state rather than calling it here potentially on a tap.
-        (context.read<CurrentUserModel>().fetchUsersNextPracticeWord(wordLevel as WordLevel)).then((word) {
-          debugPrint('StudentWordFeedbackPage: Next word for user ${_currentUser?.id} at level ${wordLevel?.name} is: ${word?.text}');
-          if (word != null) {
-            Navigator.pushNamed(
-              context,
-              '/student-word-practice',
-              arguments: {
-                'nextPracticeWord': word,
-                'wordLevel': wordLevel,
-              },
-            );
-          } else {
-            setState(() {
-              hasNextWord = false;
-            });
-          
-            _handleWordLevelCompleted();
-          }
-        });
+
+        // Let the student word practice page handle fetching the next word and transitioning to the level complete screen.
+        Navigator.pushNamed(
+          context,
+          '/student-word-practice',
+          arguments: {
+            'wordLevel': wordLevel,
+          },
+        );
+
       },
       child: Container(
         height: 44,

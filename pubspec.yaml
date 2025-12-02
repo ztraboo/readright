@@ -70,6 +70,7 @@ dependencies:
 
   # State management
   provider: ^6.0.5
+  shared_preferences: ^2.5.3
 
   # Export .csv
   csv: ^6.0.0
