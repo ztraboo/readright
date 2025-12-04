@@ -12,6 +12,7 @@ import '../../services/export_student_progress.dart';
 import '../../services/student_progress_repository.dart';
 import '../../services/word_respository.dart';
 import '../../utils/app_colors.dart';
+import '../../utils/app_constants.dart';
 
 
 class TeacherDashboardPage extends StatefulWidget {
@@ -26,7 +27,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
   ClassModel? _classSection;
 
   // Audio retention state (loaded once)
-  bool _audioRetention = false;
+  bool _audioRetention = AppConstants.defaultAudioRetention;
   bool _audioRetentionLoaded = false;
 
   @override
