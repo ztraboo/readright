@@ -58,8 +58,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   bool _isIntroductionTtsPlaying = false;
   Timer? _recordTimer;
   int _msElapsed = 0; // milliseconds elapsed during recording
-  bool retention = false;  // audio retention
-  String storedAudioPath = '';
 
   late final UserModel? _currentUser;
   ClassModel? _currentClassSection;
@@ -174,9 +172,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   wordLevel = args['wordLevel'] as WordLevel?;
                   practiceWord = nextWord;
 
-                  // Fetch a new sentence for the practice word.
-                  // fetchNewWordSentence();
-
                   // Handle the header TTS.
                   // We're only calling this here to ensure it runs after initial state setup.
                   // This will not be called again if the user traverse from
@@ -237,19 +232,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     _cheetahAssessor = CheetahAssessor(pcmRecorder: _pcmRecorder, practiceWord: practiceWord!.text);
 
     await _cheetahAssessor.start();
-  }
-
-  void fetchNewWordSentence() {
-      // Select a random sentence index for the practice word
-      // Normalize to match filenames
-      // Only pick a sentence index if we haven't already set one.
-      final word = practiceWord?.text.trim().toLowerCase();
-      final idx = (DateTime.now().millisecondsSinceEpoch % 3) + 1;
-      debugPrint('StudentWordPracticePage: Selected sentence index: $idx for word: $word');
-      setState(() {
-        practiceSentenceId = 'sentence_$idx';
-        practiceSentenceIndex = idx;
-      });
   }
 
   // Explicit check/request microphone permission for the recorder.
@@ -320,86 +302,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           SnackBar(content: Text('Error checking microphone permission: $e')),
         );
       return;
-    }
-  }
-
-  // Store an attempt record and student progress in Firestore.
-  Future<void> storeAttempt({
-    required String classId,
-    required String userId,
-    required String wordId,
-    required String transcript,
-    required String audioPath,
-    required int durationMS,
-    required double confidence,
-    required double score,
-    required AudioCodec audioCodec,
-  }) async {
-    final attempt = AttemptModel(
-      classId: classId,
-      userId: userId,
-      wordId: wordId,
-      speechToTextTranscript: transcript,
-      audioCodec: audioCodec,
-      audioPath: audioPath,
-      durationMS: durationMS,
-      confidence: confidence,
-      score: score,
-      devicePlatform: DeviceUtils.getCurrentPlatform(),
-      deviceOS: await DeviceUtils.getOsVersion(),
-    );
-
-  // Determine if audio retention is enabled by teacher
-    try {
-      final classDoc = await FirebaseFirestore.instance
-          .collection('classes')
-          .where('studentIds', arrayContains: userId)
-          .limit(1)
-          .get();
-
-      final classData =
-      classDoc.docs.isNotEmpty ? classDoc.docs.first.data() : {};
-      retention = classData['audioRetention'];
-    } catch (e) {
-      debugPrint('StudentWordPracticePage: Error determining class: $e');
-    }
-
-    // Save attempt record to Firestore.
-    try {
-      await AttemptRepository().upsertAttempt(attempt);
-      debugPrint('StudentWordPracticePage: Attempt record added successfully for wordId: $wordId');
-    } catch (e) {
-      debugPrint('StudentWordPracticePage: Error adding attempt record: $e');
-    }
-
-    // Save student progress update to Firestore.
-    try {
-      final studentProgress = await StudentProgressRepository().fetchProgressByUid(userId);
-
-      await StudentProgressRepository().upsertProgress(
-        studentProgress!
-          .addAttemptId(attempt.id, wordId: wordId, score: score)
-      );
-
-      debugPrint('StudentWordPracticePage: Student progress updated successfully for userId: $userId');
-    } catch (e) {
-      debugPrint('StudentWordPracticePage: Error updating student progress: $e');
-    }
-
-    // Save class progress update to Firestore.
-    try {
-      // Fetch the current class model since it might have changed between attempts for multiple students.
-      _currentClassSection = await ClassRepository().fetchClassById(classId);
-      // ignore: use_build_context_synchronously
-      context.read<CurrentUserModel>().classSection = _currentClassSection;
-
-      await ClassRepository().upsertClass(
-        await _currentClassSection!
-          .addAttemptId(wordId: wordId, score: score)
-        );
-      debugPrint('StudentWordPracticePage: Class progress updated successfully for classId: $classId');
-    } catch (e) {
-      debugPrint('StudentWordPracticePage: Error updating class progress: $e');
     }
   }
 
@@ -529,6 +431,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     String? uploadPath;
     AssessmentResult? attemptResult;
 
+    // Hold reference to Firebase Storage upload path
+    String? fbStoragePath;
+
     // Save buffered PCM bytes and encode to WAV and AAC using FFmpeg.
     // Write raw PCM to a temp file, ask FFmpeg to create WAV, then AAC.
     final pcmBytes = _pcmRecorder.getBufferedPcmBytes();
@@ -543,7 +448,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       await pcmFile.writeAsBytes(pcmBytes);
 
       // Hold reference to Firebase Storage upload path
-      String? fbStoragePath;
+      // String? fbStoragePath;
 
       // Create WAV from raw PCM using FFmpeg. Use `path` helper to reliably
       // swap the extension (avoids regex edge-cases where replace may fail).
@@ -561,16 +466,29 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         try {
           // Prefer direct conversion from PCM -> AAC to avoid unnecessary WAV intermediate.
           await AudioConverter.convertPcmToAac(pcmPath, aacPath);
-          fbStoragePath = await uploadAudioFile(aacPath);
-          storedAudioPath = fbStoragePath;
+
+          if (_currentClassSection?.audioRetention == true) {
+            debugPrint("StudentWordPracticePage: Audio retention is enabled, keeping AAC file for upload.");
+            fbStoragePath = await uploadAudioFile(aacPath);
+          } else {
+            debugPrint("StudentWordPracticePage: Audio retention is disabled, AAC file will be uploaded but not retained locally.");
+            fbStoragePath = AppConstants.messageAudioRetentionDisabled;
+          }
+
           uploadPath = aacPath;
         } catch (e, st) {
           debugPrint(
             'StudentWordPracticePage: PCM->AAC conversion failed: $e\n$st -- falling back to uploading WAV',
           );
           try {
-            fbStoragePath = await uploadAudioFile(wavPath);
-            storedAudioPath = fbStoragePath;
+            if (_currentClassSection?.audioRetention == true) {
+              debugPrint("StudentWordPracticePage: Audio retention is enabled, keeping WAV file for upload.");
+              fbStoragePath = await uploadAudioFile(wavPath);
+            } else {
+              debugPrint("StudentWordPracticePage: Audio retention is disabled, WAV file will be uploaded but not retained locally.");
+              fbStoragePath = AppConstants.messageAudioRetentionDisabled;
+            }
+
             uploadPath = wavPath;
           } catch (e3, st3) {
             debugPrint('StudentWordPracticePage: Fallback upload (WAV) also failed: $e3\n$st3');
@@ -591,6 +509,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         if (mounted && recognizedText.isNotEmpty) {
           setState(() {
             _lastTranscript = recognizedText;
+            debugPrint("StudentWordPracticePage: Deepgram recognized text: $_lastTranscript");
           });
         }
       } catch (e, st) {
@@ -602,6 +521,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             if (mounted && recognizedText.isNotEmpty) {
               setState(() {
                 _lastTranscript = recognizedText;
+                debugPrint("StudentWordPracticePage: Cheetah recognized text: $_lastTranscript");
               });
             }
           } catch (e, st) {
@@ -610,26 +530,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         }
         debugPrint('StudentWordPracticePage: Error running final assess on buffered PCM: $e\n$st');
       }
-
-      // Store attempt record in Firestore
-      await storeAttempt(
-        classId: _currentClassSection?.id ?? 'Unknown',
-        userId: _currentUser?.id ?? 'unknown_user',
-        wordId: practiceWord?.id ?? 'unknown_word_id',
-        transcript: _lastTranscript ?? '',
-        audioPath: fbStoragePath ?? '',
-        durationMS: pcmBytes.length ~/ 32, // approximate duration
-        confidence: attemptResult?.confidence ?? 0.0,
-        score: attemptResult?.score ?? 0.0,
-        audioCodec: (() {
-          final p = uploadPath ?? '';
-          final ext = path.extension(p).toLowerCase();
-          if (ext == '.aac') return AudioCodec.aac;
-          if (ext == '.wav') return AudioCodec.wav;
-          if (ext == '.pcm') return AudioCodec.pcm16;
-          return AudioCodec.unknown;
-        })(),
-      );
 
       // Cleanup temp files for PCM and WAV. AAC is kept for upload.
       try {
@@ -662,21 +562,6 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
       return;
     }
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Verifying recording quality...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-    await Future.delayed(const Duration(seconds: 3));
-
-    // Reset the word sentence if we need to practice again.
-    fetchNewWordSentence();
-
     // Pass the final uploaded path (wav if converted, otherwise original)
     if (!mounted) return;
 
@@ -689,6 +574,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
 
     // Instead of passing a filesystem path, pass the in-memory PCM bytes
     // so the feedback screen can replay immediately from the recorder buffer.
+    // Send audio information so we can store an attempt record on the word feedback screen.
     Navigator.of(
       context,
     ).pushReplacementNamed(
@@ -698,34 +584,17 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
           'attemptResult': attemptResult,
           'practiceWord': practiceWord,
           'wordLevel': wordLevel,
+          'audioPath': fbStoragePath ?? '',
+          'audioCodec': (() {
+            final p = uploadPath ?? '';
+            final ext = path.extension(p).toLowerCase();
+            if (ext == '.aac') return AudioCodec.aac;
+            if (ext == '.wav') return AudioCodec.wav;
+            if (ext == '.pcm') return AudioCodec.pcm16;
+            return AudioCodec.unknown;
+          })(),
+          'audioDurationMS': pcmBytes.length ~/ 32, // approximate duration
         });
-    if (!retention) {
-
-      debugPrint("audio retention is off. stored path: $storedAudioPath");
-      try {
-        // Update stored audio path to reflect deletion
-        final attemptQuery = await FirebaseFirestore.instance
-            .collection('attempts')
-            .where('audioPath', isEqualTo: storedAudioPath)
-            .limit(1)
-            .get();
-
-        if (attemptQuery.docs.isNotEmpty) {
-          final docRef = attemptQuery.docs.first.reference;
-          await docRef.update({
-            'audioPath': 'Audio retention is disabled',
-          });
-        }
-
-        // delete stored audio file after it's used
-        final ref = FirebaseStorage.instance.ref().child(storedAudioPath);
-        await ref.delete();
-        debugPrint("Deleted file at $storedAudioPath");
-
-      } catch (e) {
-        debugPrint("Failed to delete file: $e");
-      }
-    }
   }
 
   Future<void> playRecording() async {

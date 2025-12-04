@@ -8,6 +8,7 @@ class ClassModel {
 
   // This 'id' value will be the Firestore document ID.
   late final String? id;
+  final bool audioRetention;
   final double averageClassWordAttemptScore;
   late final String? classCode;
   String institution;
@@ -19,6 +20,7 @@ class ClassModel {
 
   ClassModel({
     String? id,
+    this.audioRetention = false,
     this.averageClassWordAttemptScore = 0.0,
     String? classCode,
     this.institution = '',
@@ -51,6 +53,7 @@ class ClassModel {
   // Create a copy of the current ClassModel with optional new values.
   ClassModel copyWith({
     String? id,
+    bool? audioRetention,
     double? averageClassWordAttemptScore,
     String? classCode,
     String? institution,
@@ -62,6 +65,7 @@ class ClassModel {
   }) {
     return ClassModel(
       id: id ?? this.id,
+      audioRetention: audioRetention ?? this.audioRetention,
       averageClassWordAttemptScore: averageClassWordAttemptScore ?? this.averageClassWordAttemptScore,
       classCode: classCode ?? this.classCode,
       institution: institution ?? this.institution,
@@ -134,6 +138,7 @@ class ClassModel {
         json['teacherId'] as String? ?? '',
         json['sectionId'] as String? ?? '',
       ),
+      audioRetention: (json['audioRetention'] as bool?) ?? false,
       averageClassWordAttemptScore: (json['averageClassWordAttemptScore'] as num?)?.toDouble() ?? 0.0,
       classCode: json['classCode'] as String? ?? '',
       institution: json['institution'] as String? ?? '',
@@ -149,6 +154,7 @@ class ClassModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'audioRetention': audioRetention,
       'averageClassWordAttemptScore': averageClassWordAttemptScore,
       'classCode': classCode,
       'institutionId': institution,

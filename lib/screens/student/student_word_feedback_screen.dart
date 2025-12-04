@@ -9,7 +9,6 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
-import 'package:readright/models/word_model.dart';
 
 import '../../audio/stream/pcm_player.dart';
 import '../../audio/stt/pronunciation_assessor.dart';
@@ -20,14 +19,14 @@ import 'package:readright/models/user_model.dart';
 import 'package:readright/models/word_model.dart';
 import 'package:readright/services/attempt_repository.dart';
 import 'package:readright/services/class_repository.dart';
-import 'package:readright/services/user_repository.dart';
+import 'package:readright/services/student_progress_repository.dart';
 import 'package:readright/services/word_respository.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/app_scoring.dart';
 import '../../utils/app_styles.dart';
-import 'package:readright/utils/enums.dart';    
-
+import 'package:readright/utils/enums.dart';
+import 'package:readright/utils/device_utility.dart';
 
 class StudentWordFeedbackPage extends StatefulWidget {
 
@@ -41,6 +40,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
 
   late final UserModel? _currentUser;
   late final ClassModel? _currentClassSection;
+  late final String? audioPath;
+  late final int? audioDurationMS;
+  late final AudioCodec? audioCodec;
 
   WordModel? practiceWord;
   String? practiceSentenceId;
@@ -70,6 +72,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
           _pcmBytes = args['pcmBytes'] as Uint8List?;
           practiceWord = args['practiceWord'] as WordModel?;
           wordLevel = args['wordLevel'] as WordLevel?;
+          audioPath = args['audioPath'] as String?;
+          audioDurationMS = args['audioDurationMS'] as int?;
+          audioCodec = args['audioCodec'] as AudioCodec?;
         });
       } else if (args is Map) {
         setState(() {
@@ -77,6 +82,9 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
           _pcmBytes = args['pcmBytes'] as Uint8List?;
           practiceWord = args['practiceWord'] as WordModel?;
           wordLevel = args['wordLevel'] as WordLevel?;
+          audioPath = args['audioPath'] as String?;
+          audioDurationMS = args['audioDurationMS'] as int?;
+          audioCodec = args['audioCodec'] as AudioCodec?;
         });
       }
 
@@ -106,6 +114,15 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
           _currentClassSection = context.read<CurrentUserModel>().classSection;
 
           debugPrint('StudentWordFeedbackPage: User UID: ${_currentUser!.id}, Username: ${_currentUser!.username}, Email: ${_currentUser!.email}, Role: ${_currentUser!.role.name}, ClassSection: ${_currentClassSection?.id}');
+
+          // Save the attempt record and update student and class progress.
+          storeAttempt(
+            audioPath: audioPath ?? '',
+            audioDurationMS: audioDurationMS ?? 0,
+            audioCodec: audioCodec ?? AudioCodec.unknown,
+          ).then( (_) {
+            // Do nothing for now after storing attempt.
+          });
         } else {
           debugPrint('StudentWordFeedbackPage: No persisted user found.');
         }
@@ -119,7 +136,6 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
       // This will not be called again if the user traverse from
       // the student feedback screen back to this practice screen.
       _handleIntroductionTts();
-
     }); 
   } 
 
@@ -160,6 +176,75 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
         practiceSentenceId = 'sentence_$idx';
         practiceSentenceIndex = idx;
       });
+  }
+
+  // Store an attempt record and student progress in Firestore.
+  // IMPORTANT: When we did this on the recording screen before navigating to feedback, we received a lag
+  // when traversing pages. By moving this to the feedback screen after navigation, the user experience is smoother.
+  Future<void> storeAttempt({
+    required String audioPath,
+    required int audioDurationMS,
+    required AudioCodec audioCodec,
+  }) async {
+
+    debugPrint("StudentWordPracticePage: Storing attempt record for wordId: ${practiceWord?.id}, audioPath: $audioPath");
+
+    final classId = _currentClassSection?.id ?? '';
+    final userId = _currentUser?.id ?? '';
+    final wordId = practiceWord?.id ?? '';
+    final score = _attemptResult?.score ?? 0.0;
+
+    final attempt = AttemptModel(
+      classId: classId,
+      userId: userId,
+      wordId: wordId,
+      speechToTextTranscript: _attemptResult?.recognizedText ?? '',
+      audioCodec: audioCodec,
+      audioPath: audioPath,
+      durationMS: audioDurationMS,
+      confidence: _attemptResult?.confidence ?? 0.0,
+      score: score,
+      devicePlatform: DeviceUtils.getCurrentPlatform(),
+      deviceOS: await DeviceUtils.getOsVersion(),
+    );
+
+    // Save attempt record to Firestore.
+    try {
+      await AttemptRepository().upsertAttempt(attempt);
+      debugPrint('StudentWordPracticePage: Attempt record added successfully for wordId: $wordId');
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: Error adding attempt record: $e');
+    }
+
+    // Save student progress update to Firestore.
+    try {
+      final studentProgress = await StudentProgressRepository().fetchProgressByUid(userId);
+
+      await StudentProgressRepository().upsertProgress(
+        studentProgress!
+          .addAttemptId(attempt.id, wordId: wordId, score: score)
+      );
+
+      debugPrint('StudentWordPracticePage: Student progress updated successfully for userId: $userId');
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: Error updating student progress: $e');
+    }
+
+    // Save class progress update to Firestore.
+    try {
+      // Fetch the current class model since it might have changed between attempts for multiple students.
+      _currentClassSection = await ClassRepository().fetchClassById(classId);
+      // ignore: use_build_context_synchronously
+      context.read<CurrentUserModel>().classSection = _currentClassSection;
+
+      await ClassRepository().upsertClass(
+        await _currentClassSection!
+          .addAttemptId(wordId: wordId, score: score)
+        );
+      debugPrint('StudentWordPracticePage: Class progress updated successfully for classId: $classId');
+    } catch (e) {
+      debugPrint('StudentWordPracticePage: Error updating class progress: $e');
+    }
   }
 
   void _handleRetry() {
