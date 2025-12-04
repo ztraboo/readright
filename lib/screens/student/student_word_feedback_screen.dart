@@ -793,7 +793,7 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
     debugPrint("StudentWordFeedbackPage: building star rating for score $_currentScore -> rounded $roundedScore (full=$fullStars half=$hasHalf)");
 
     return Container(
-      width: double.infinity,
+      width: MediaQuery.of(context).size.width,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -811,12 +811,14 @@ class _StudentWordFeedbackPageState extends State<StudentWordFeedbackPage> {
             semantics = 'Star Gray';
           }
 
+          double starSize = MediaQuery.of(context).size.width / (totalStars + 2);
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: SvgPicture.asset(
               asset,
-              width: 70,
-              height: 70,
+              width: starSize,
+              height: starSize,
               semanticsLabel: semantics,
             ),
           );

@@ -216,154 +216,157 @@ class _StudentWordLevelCompletedPageState extends State<StudentWordLevelComplete
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 18),
-          child: Column(
-            children: [
-              // Confetti overlay
-              // Top center rain
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConfettiWidget(
-                  confettiController: _confettiController,
-                  blastDirectionality: BlastDirectionality.explosive,
-                  blastDirection: 3.14 / 2 * 3, // direction in radians
-                  emissionFrequency: 0.9,
-                  numberOfParticles: 5,
-                  maxBlastForce: 25,
-                  minBlastForce: 5,
-                  gravity: 0.4,
-                  colors: const [
-                    AppColors.buttonPrimaryOrange,
-                    AppColors.buttonPrimaryBlue,
-                    AppColors.buttonSecondaryRed,
-                    AppColors.progressMicrophoneBackground
-                  ], // <- only use these colors
-                ),
-              ),
-
-              const SizedBox(height: 100),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7498C4),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  (context.read<CurrentUserModel>().currentWordLevel == null)
-                    ? 'GAME OVER'
-                    : 'LEVEL COMPLETE',
-                  style: AppStyles.headerText.copyWith(
-                    color: Colors.white,
-                    // fontSize: 28,`
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Confetti overlay
+                // Top center rain
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: _confettiController,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    blastDirection: 3.14 / 2 * 3, // direction in radians
+                    emissionFrequency: 0.9,
+                    numberOfParticles: 5,
+                    maxBlastForce: 25,
+                    minBlastForce: 5,
+                    gravity: 0.4,
+                    colors: const [
+                      AppColors.buttonPrimaryOrange,
+                      AppColors.buttonPrimaryBlue,
+                      AppColors.buttonSecondaryRed,
+                      AppColors.progressMicrophoneBackground
+                    ], // <- only use these colors
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-              // Text(
-              //   'You completed $completed of $total words for',
-              //   style: AppStyles.subheaderText,
-              //   textAlign: TextAlign.center,
-              // ),
-              // const SizedBox(height: 6),
-              // Text(
-              //   levelName,
-              //   style: AppStyles.headerText,
-              //   textAlign: TextAlign.center,
-              // ),
-              const SizedBox(height: 25),
-              _buildYetiIllustration(),
-              const SizedBox(height: 25),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF303030).withOpacity(0.90),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Nice work, ',
-                          style: AppStyles.subheaderText.copyWith(
-                            color: Colors.white
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _currentUser != null
-                              ? '${_currentUser?.username}!'
-                              : '!',
-                          style: AppStyles.subheaderText.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      (context.read<CurrentUserModel>().currentWordLevel == null)
-                        ? 'You did it, congratulations!'
-                        : 'Click next level to practice more words.',
-                      style: AppStyles.chipText.copyWith(
-                        color: Colors.white
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
-              // const Spacer(),
-              const SizedBox(height: 25),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 100),
-                child: Row(
-                  children: [
-                    (context.read<CurrentUserModel>().currentWordLevel == null)
-                      ? SizedBox.shrink()
-                      : Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          // Stop audio playing
-                          // Stop animations/confetti and replace this route so Flutter disposes it.
-                          // Do NOT call dispose() manually.
-                          try { _confettiController.stop(); } catch (_) {}
-                          try { _controller.stop(); _controller.reset(); } catch (_) {}
 
-                          // Replace the current page with the practice page (this will trigger dispose())
-                          Future.delayed(const Duration(seconds: 1), () {
-                            if (!mounted) return;
-                            Navigator.pushReplacementNamed(
-                              context,
-                              '/student-word-practice',
-                              arguments: {
-                                'wordLevel': nextWordLevel,
-                              },
-                            );
-                          });
-                          return;
-                        },
-                        child: Container(
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: AppColors.buttonPrimaryOrange,
-                            borderRadius: BorderRadius.circular(1000),
+                const SizedBox(height: 100),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7498C4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    (context.read<CurrentUserModel>().currentWordLevel == null)
+                      ? 'GAME OVER'
+                      : 'LEVEL COMPLETE',
+                    style: AppStyles.headerText.copyWith(
+                      color: Colors.white,
+                      height:1.0
+                      // fontSize: 28,`
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                // Text(
+                //   'You completed $completed of $total words for',
+                //   style: AppStyles.subheaderText,
+                //   textAlign: TextAlign.center,
+                // ),
+                // const SizedBox(height: 6),
+                // Text(
+                //   levelName,
+                //   style: AppStyles.headerText,
+                //   textAlign: TextAlign.center,
+                // ),
+                const SizedBox(height: 25),
+                _buildYetiIllustration(),
+                const SizedBox(height: 25),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF303030).withOpacity(0.90),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Nice work, ',
+                            style: AppStyles.subheaderText.copyWith(
+                              color: Colors.white
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          child: const Center(
-                            child: Text('NEXT LEVEL', style: AppStyles.buttonText),
+                          const SizedBox(width: 8),
+                          Text(
+                            _currentUser != null
+                                ? '${_currentUser?.username}!'
+                                : '!',
+                            style: AppStyles.subheaderText.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        (context.read<CurrentUserModel>().currentWordLevel == null)
+                          ? 'You did it, congratulations!'
+                          : 'Click next level to practice more words.',
+                        style: AppStyles.chipText.copyWith(
+                          color: Colors.white
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+                // const Spacer(),
+                const SizedBox(height: 25),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 100),
+                  child: Row(
+                    children: [
+                      (context.read<CurrentUserModel>().currentWordLevel == null)
+                        ? SizedBox.shrink()
+                        : Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            // Stop audio playing
+                            // Stop animations/confetti and replace this route so Flutter disposes it.
+                            // Do NOT call dispose() manually.
+                            try { _confettiController.stop(); } catch (_) {}
+                            try { _controller.stop(); _controller.reset(); } catch (_) {}
+
+                            // Replace the current page with the practice page (this will trigger dispose())
+                            Future.delayed(const Duration(seconds: 1), () {
+                              if (!mounted) return;
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/student-word-practice',
+                                arguments: {
+                                  'wordLevel': nextWordLevel,
+                                },
+                              );
+                            });
+                            return;
+                          },
+                          child: Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: AppColors.buttonPrimaryOrange,
+                              borderRadius: BorderRadius.circular(1000),
+                            ),
+                            child: const Center(
+                              child: Text('NEXT LEVEL', style: AppStyles.buttonText),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-            ],
+                const SizedBox(height: 18),
+              ],
+            ),
           ),
         ),
       ),
