@@ -8,6 +8,7 @@ import '../../models/user_model.dart';
 import '../../services/class_repository.dart';
 import '../../services/user_repository.dart';
 import '../../utils/app_colors.dart';
+import '../../utils/app_constants.dart';
 import '../../utils/app_styles.dart';
 import '../../utils/enums.dart';
 import '../../utils/validators.dart';
@@ -108,7 +109,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
 
         break;
       case UserRole.student:
-        if (prefs.getBool('showStudentWordDashboardScreen') == true) {
+        if (prefs.getBool(AppConstants.prefShowStudentWordDashboardScreen) == true) {
           navigateToDashboard();  
         } else {
           // ignore: use_build_context_synchronously

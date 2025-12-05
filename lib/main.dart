@@ -32,6 +32,8 @@ import 'screens/teacher/teacher_dashboard_screen.dart';
 import 'screens/teacher/teacher_word_dashboard_screen.dart';
 import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
+import 'utils/app_constants.dart';
+import 'utils/online_monitor.dart';
 
 // import 'package:readright/utils/seed_words_uploader.dart';
 
@@ -64,8 +66,23 @@ class _AppInitializerState extends State<AppInitializer> {
 
   Future<void> _loadSharedPreferences() async {
     _prefs = await SharedPreferences.getInstance();
-    _prefs.setBool('showStudentWordDashboardScreen', false);
+    _prefs.setBool(AppConstants.prefShowStudentWordDashboardScreen, false);
+
+    // Initialize toggled offline mode to true when you need to debug offline features.
+    _prefs.setBool(AppConstants.prefToggledOfflineMode, false);
     debugPrint('SharedPreferences initialized');
+
+    // If offline mode was toggled, set isOnline to false to simulate offline state.
+    // Otherwise, start the online monitor to check connectivity.
+    if (_prefs.getBool(AppConstants.prefToggledOfflineMode) == true) {
+      _prefs.setBool(AppConstants.prefIsOnline, false);
+      debugPrint('Offline mode toggled: setting isOnline SharedPreferences to false');
+    } else {
+      // start centralized online monitor (non-blocking)
+      OnlineMonitor.instance.start().catchError((e) {
+        debugPrint('OnlineMonitor failed to start: $e');
+      });
+    }
   }
 
   Future<void> _initOnce() async {
@@ -79,10 +96,12 @@ class _AppInitializerState extends State<AppInitializer> {
       debugPrint('Firebase initialized (post-start)');
 
       // Enable persistence and set cache size; ignore on web where settings may differ.
+      // Use large cache for offline support for query indexing and LRU eviction to avoid frequent re-fetching.
+      // We previously had Settings.CACHE_SIZE_UNLIMITED but that could lead to storage issues on device or app crashes.
       try {
         FirebaseFirestore.instance.settings = const Settings(
           persistenceEnabled: true,
-          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+          cacheSizeBytes: 200 * 1024 * 1024, // 200 MB
         );
       } catch (e) {
         debugPrint('Could not apply Firestore settings (platform may not support): $e');

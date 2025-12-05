@@ -7,6 +7,7 @@ import 'package:readright/models/current_user_model.dart';
 import 'package:readright/services/user_repository.dart';
 
 import '../../utils/app_colors.dart';
+import '../../utils/app_constants.dart';
 import '../../utils/app_styles.dart';
 import '../../utils/enums.dart';
 
@@ -130,7 +131,7 @@ class _StudentPasscodeVerificationPageState
     // Only navigate if the widget is still mounted after the delay.
     if (mounted) {
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool('showStudentWordDashboardScreen') == true) {
+      if (prefs.getBool(AppConstants.prefShowStudentWordDashboardScreen) == true) {
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/student-word-dashboard',
