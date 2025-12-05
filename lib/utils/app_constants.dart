@@ -10,4 +10,9 @@ class AppConstants {
     // Audio path retention default.
     static const bool defaultAudioRetention = false;
     static const String messageAudioRetentionDisabled = "Audio retention is disabled";
+
+    // SharedPreferences keys
+    static const String prefShowStudentWordDashboardScreen = 'pref_show_student_word_dashboard_screen';
+    static const String prefIsOnline = 'pref_is_online';
+    static const String prefToggledOfflineMode = 'pref_toggled_offline_mode';
 }

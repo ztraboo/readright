@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_core/firebase_core.dart';
@@ -67,26 +68,11 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
   int? practiceSentenceIndex;
   String? displaySentence = '';
   WordLevel? wordLevel;
-  bool online = false;
+  
+  late final SharedPreferences prefs;
 
   // ignore: constant_identifier_names
   static const int TIMER_DURATION_MS = 3000;
-
-  // determine if there is a valid internet connection
-  Future<bool> hasInternetConnection() async {
-    try {
-      final response = await http.get(Uri.parse('https://www.google.com'))
-          .timeout(Duration(seconds: 3));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void checkConnection() async {
-    online = await hasInternetConnection();
-    debugPrint('StudentWordPracticePage: Online: $online');
-  }
 
   final FlutterTts flutterTts = FlutterTts();
 
@@ -107,6 +93,9 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // Grab SharedPreferences instance
+    _initSharedPreferences();
+
     // Grab passed arguments from Navigator
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
@@ -124,7 +113,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
             _handleIntroductionTts();
 
             // Execute this line only if there is no network
-            if (online == false){
+            if (prefs.getBool(AppConstants.prefIsOnline) == false){
               _startSTTAccessor();
             }
           });
@@ -157,7 +146,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                 _handleIntroductionTts();
 
                 // Execute this line only if there is no network
-                if (online == false){
+                if (prefs.getBool(AppConstants.prefIsOnline) == false){
                   _startSTTAccessor();
                 }
               });
@@ -179,7 +168,7 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
                   _handleIntroductionTts();
 
                   // Execute this line only if there is no network
-                  if (online == false){
+                  if (prefs.getBool(AppConstants.prefIsOnline) == false){
                     _startSTTAccessor();
                   }
                 });
@@ -211,6 +200,10 @@ class _StudentWordPracticePageState extends State<StudentWordPracticePage>
         // Initialize the PCM recorder if not already initialized
         _initPCMRecorder();
     });
+  }
+
+  Future<void> _initSharedPreferences() async {
+    prefs = await SharedPreferences.getInstance();
   }
 
   // Initialize the PCM player now. The recorder will manage microphone permission.
