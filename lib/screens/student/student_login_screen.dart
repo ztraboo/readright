@@ -401,25 +401,32 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
     );
   }
 
-  Widget _buildPushButton(){
-    return ElevatedButton(
-  onPressed: () async {
-    // Request notification permissions (iOS & Android 13+)
-    final granted = await DailyReminderService.requestPermissionsIfNeeded();
+Widget _buildPushButton() {
+  return ElevatedButton(
+    onPressed: () async {
+      debugPrint('Push button pressed');
 
-    if (granted) {
-      // Schedule a test notification 10 seconds from now
-      await DailyReminderService.scheduleDailyNoonReminder(testMode: true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Test notification scheduled!')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notification permission denied!')),
-      );
-    }
-  },
-  child: const Text("Trigger Test Notification"),
-);
-  }
+      final granted =
+          await DailyReminderService.requestPermissionsIfNeeded();
+
+      debugPrint('Permission granted? $granted');
+
+      if (granted) {
+        await DailyReminderService.showImmediateTestNotification();
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Immediate notification sent')),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notification permission denied')),
+        );
+      }
+    },
+    child: const Text('Trigger Test Notification'),
+  );
+}
+
 }

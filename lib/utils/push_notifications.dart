@@ -12,7 +12,8 @@ class DailyReminderService {
   static Future<void> init() async {
     // Initialize timezone package
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.local); // Use device local timezone
+    // Use device local timezone
+    tz.setLocalLocation(tz.local); 
 
     // Android initialization
     const AndroidInitializationSettings androidSettings =
@@ -30,43 +31,52 @@ class DailyReminderService {
       iOS: iosSettings,
     );
 
-    await _notificationsPlugin.initialize(settings);
-  }
-
-static Future<bool> requestPermissionsIfNeeded() async {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  // iOS permission
-  final iosPlugin = flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-  if (iosPlugin != null) {
-    final bool? granted = await iosPlugin.requestPermissions(
-      alert: true,
-      badge: true,
-      sound: true,
+    await _notificationsPlugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (details) {
+        print('Notification tapped! Payload: ${details.payload}');
+      },
     );
-    return granted ?? false;
+
+    print('DailyReminderService initialized');
   }
 
-  // Android permission (runtime required on API 33+)
-  if (await Permission.notification.isDenied) {
-    final result = await Permission.notification.request();
-    return result.isGranted;
+  /// Request notification permissions
+  static Future<bool> requestPermissionsIfNeeded() async {
+    // iOS permission
+    final iosPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    if (iosPlugin != null) {
+      final bool? granted = await iosPlugin.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      return granted ?? false;
+    }
+
+    // Android API 33+ runtime permission
+    if (await Permission.notification.isDenied) {
+      final result = await Permission.notification.request();
+      return result.isGranted;
+    }
+
+    return true;
   }
 
-  return true;
-}
-
-  /// Schedules a daily reminder at 12:00 PM
-  /// Set [testMode] to true to schedule 10 seconds from now for testing
+  /// Schedules a daily reminder at 12:00 PM, or in 10 seconds for test mode
   static Future<void> scheduleDailyNoonReminder({bool testMode = false}) async {
+    final scheduledTime = _nextInstanceOfNoon(testMode: testMode);
+    print('Notification scheduled for ${scheduledTime.toLocal()}');
+
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'daily_reminder_channel',
       'Daily Practice Reminder',
       channelDescription: 'Daily 12 PM reading practice reminder',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
+      ticker: 'Time to practice!',
     );
 
     const NotificationDetails notificationDetails = NotificationDetails(
@@ -82,29 +92,31 @@ static Future<bool> requestPermissionsIfNeeded() async {
       0,
       'Time to Practice 📚',
       'Open ReadRight and practice your words!',
-      _nextInstanceOfNoon(testMode: testMode),
+      scheduledTime,
       notificationDetails,
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+      matchDateTimeComponents: testMode ? null : DateTimeComponents.time,
     );
+
+    print('Notification scheduled successfully');
   }
 
-  /// Cancels the daily reminder
+  /// Cancel daily reminder
   static Future<void> cancelDailyReminder() async {
     await _notificationsPlugin.cancel(0);
+    print('Daily reminder canceled');
   }
 
-  /// Determines the next 12:00 PM occurrence (or 10 seconds from now if testMode)
+  /// Returns the next 12:00 PM occurrence (or 10 seconds from now if testMode)
   static tz.TZDateTime _nextInstanceOfNoon({bool testMode = false}) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
 
     if (testMode) {
-      // Schedule 10 seconds from now for testing
+      // Schedule 10 seconds from now
       return now.add(const Duration(seconds: 10));
     } else {
-      // Regular daily 12 PM
       tz.TZDateTime scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 12);
       if (scheduled.isBefore(now)) {
         scheduled = scheduled.add(const Duration(days: 1));
@@ -112,4 +124,29 @@ static Future<bool> requestPermissionsIfNeeded() async {
       return scheduled;
     }
   }
+  static Future<void> showImmediateTestNotification() async {
+  const AndroidNotificationDetails androidDetails =
+      AndroidNotificationDetails(
+    'immediate_test_channel',
+    'Immediate Test Notifications',
+    channelDescription: 'Immediate test notifications',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
+
+  const NotificationDetails details = NotificationDetails(
+    android: androidDetails,
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+    ),
+  );
+
+  await _notificationsPlugin.show(
+    123,
+    '✅ Test Notification',
+    'This should appear instantly',
+    details,
+  );
+}
 }
