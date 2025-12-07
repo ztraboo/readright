@@ -109,6 +109,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
 
         break;
       case UserRole.student:
+
         if (prefs.getBool(AppConstants.prefShowStudentWordDashboardScreen) == true) {
           navigateToDashboard();  
         } else {
@@ -271,7 +272,6 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
             const SizedBox(height: 14),
             _buildSubmitButton(),
             const SizedBox(height: 25),
-            // _buildYetiIllustration(),
           ],
         ),
       ),

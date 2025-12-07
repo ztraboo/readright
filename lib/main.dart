@@ -35,6 +35,10 @@ import 'screens/teacher/class/class_dashboard_screen.dart';
 import 'utils/app_constants.dart';
 import 'utils/online_monitor.dart';
 
+//Firebase Notifications
+import 'utils/firebase_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 // import 'package:readright/utils/seed_words_uploader.dart';
 
 /// Widget that performs asynchronous initialization (Firebase, Firestore
@@ -58,6 +62,10 @@ class _AppInitializerState extends State<AppInitializer> {
     super.initState();
 
     _loadSharedPreferences();
+    
+    //FCM
+    FirebaseNotificationService.instance.initialize();
+    FirebaseNotificationService.instance.handleInitialMessage();
 
     // Run init after the first frame to keep startup fast.
     WidgetsBinding.instance.addPostFrameCallback((_) => _initOnce());
@@ -90,14 +98,10 @@ class _AppInitializerState extends State<AppInitializer> {
     _initialized = true;
 
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      debugPrint('Firebase initialized (post-start)');
-
       // Enable persistence and set cache size; ignore on web where settings may differ.
       // Use large cache for offline support for query indexing and LRU eviction to avoid frequent re-fetching.
       // We previously had Settings.CACHE_SIZE_UNLIMITED but that could lead to storage issues on device or app crashes.
+      
       try {
         FirebaseFirestore.instance.settings = const Settings(
           persistenceEnabled: true,
@@ -214,6 +218,17 @@ class _AppInitializerState extends State<AppInitializer> {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  try{
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(
+      FirebaseNotificationService.firebaseMessagingBackgroundHandler,
+    );
+  } catch (e, st) {
+    debugPrint('Firebase initialization failed: $e\n$st');
+  }
 
   // Keep app startup non-blocking: create notifiers immediately (they are lazy)
   // and initialize Firebase & notifiers after the first frame inside AppInitializer.

@@ -15,4 +15,5 @@ class AppConstants {
     static const String prefShowStudentWordDashboardScreen = 'pref_show_student_word_dashboard_screen';
     static const String prefIsOnline = 'pref_is_online';
     static const String prefToggledOfflineMode = 'pref_toggled_offline_mode';
+    static const String prefDailyReminderScheduled = 'pref_daily_reminder_scheduled';
 }
