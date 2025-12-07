@@ -49,5 +49,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+	<string>remote-notification</string>
+	</array>
+
+	<key>NSUserNotificationUsageDescription</key>
+	<string>ReadRight uses notifications to remind students to practice reading.</string>
 </dict>
 </plist>

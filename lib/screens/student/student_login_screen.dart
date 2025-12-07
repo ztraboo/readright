@@ -12,6 +12,7 @@ import '../../utils/app_constants.dart';
 import '../../utils/app_styles.dart';
 import '../../utils/enums.dart';
 import '../../utils/validators.dart';
+import '../../utils/push_notifications.dart';
 
 class StudentLoginPage extends StatefulWidget {
   const StudentLoginPage({super.key});
@@ -109,6 +110,25 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
 
         break;
       case UserRole.student:
+        final alreadyScheduled =
+            prefs.getBool(AppConstants.prefDailyReminderScheduled) ?? false;
+
+        if (!alreadyScheduled) {
+          // Request notification permissions
+          final granted =
+              await DailyReminderService.requestPermissionsIfNeeded();
+
+          if (granted) {
+            // Schedule the daily reminder (just await, no assignment)
+            await DailyReminderService.scheduleDailyNoonReminder();
+
+            // Mark as scheduled in SharedPreferences
+            await prefs.setBool(
+              AppConstants.prefDailyReminderScheduled,
+              true,
+            );
+          }
+        }
         if (prefs.getBool(AppConstants.prefShowStudentWordDashboardScreen) == true) {
           navigateToDashboard();  
         } else {
@@ -271,6 +291,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
             const SizedBox(height: 14),
             _buildSubmitButton(),
             const SizedBox(height: 25),
+            _buildPushButton()
             // _buildYetiIllustration(),
           ],
         ),
@@ -378,5 +399,27 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
         clipBehavior: Clip.none,
       ),
     );
+  }
+
+  Widget _buildPushButton(){
+    return ElevatedButton(
+  onPressed: () async {
+    // Request notification permissions (iOS & Android 13+)
+    final granted = await DailyReminderService.requestPermissionsIfNeeded();
+
+    if (granted) {
+      // Schedule a test notification 10 seconds from now
+      await DailyReminderService.scheduleDailyNoonReminder(testMode: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Test notification scheduled!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notification permission denied!')),
+      );
+    }
+  },
+  child: const Text("Trigger Test Notification"),
+);
   }
 }

@@ -34,6 +34,7 @@ import 'screens/teacher/class/class_dashboard_screen.dart';
 //import 'screens/teacher/class/class_student_details_screen.dart';
 import 'utils/app_constants.dart';
 import 'utils/online_monitor.dart';
+import 'utils/push_notifications.dart';
 
 // import 'package:readright/utils/seed_words_uploader.dart';
 
@@ -94,7 +95,13 @@ class _AppInitializerState extends State<AppInitializer> {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       debugPrint('Firebase initialized (post-start)');
-
+      // Initialize the notification service
+      await DailyReminderService.init();
+      // Request permissions
+      await DailyReminderService.requestPermissionsIfNeeded();
+      // Schedule a test notification 10 seconds from now
+      await DailyReminderService.scheduleDailyNoonReminder(testMode: true);
+      debugPrint('DailyReminderService initialized');
       // Enable persistence and set cache size; ignore on web where settings may differ.
       // Use large cache for offline support for query indexing and LRU eviction to avoid frequent re-fetching.
       // We previously had Settings.CACHE_SIZE_UNLIMITED but that could lead to storage issues on device or app crashes.
