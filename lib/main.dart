@@ -36,7 +36,7 @@ import 'utils/app_constants.dart';
 import 'utils/online_monitor.dart';
 
 //Firebase Notifications
-import 'utils/firebase_notifictions.dart';
+import 'utils/firebase_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 // import 'package:readright/utils/seed_words_uploader.dart';
