@@ -28,14 +28,14 @@ enum WordLevelState {
 }
 
 enum WordLevel {
-  custom,
   prePrimer,
   primer,
   firstGrade,
   secondGrade,
   thirdGrade,
   fourthGrade,
-  fifthGrade
+  fifthGrade,
+  custom
 }
 
 extension WordCategoryExtension on WordLevel {
