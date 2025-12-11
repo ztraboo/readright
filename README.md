@@ -2,6 +2,10 @@
 
 A new Flutter project focusing on pronunciation of reading words. Children practice reading words aloud, receive pronunciation feedback, and track progress over time. 
 
+## License
+
+This project is licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+
 ## 📂 Future Milestone
 Additional documentation and features will be added in separate pages:
 - [README (Milestone 0)](./docs/milestone0/README_Milestone0.md) - Prototype – Structure & Screens
