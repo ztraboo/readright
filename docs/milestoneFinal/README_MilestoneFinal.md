@@ -1,4 +1,31 @@
 # 📘 ReadRight Prototype  
+This application can be used by a elementary school class as a way to exercise pronouncing [Dolche words](../../data/seed_words.csv). There is a separate interface that the student uses to just practice the words and another interface for the  teacher to view student progress. We would recommend that you view the final video presentation and guides first then view any additional documentation to get started. The application was built with Flutter in conjunction with Firebase backend.
+
+## Team Project Final Video Presentation ([PDF](../Team%20Project%20Final%20Video%20Presentation.pdf))
+This project includes a technical video presentation divided into several focused Loom recordings. We would recommend watching the videos in order for a better understanding. A presentation in PDF format is provided in case you need to review what was presented.
+
+- [Part 1: Architecture](https://www.loom.com/share/51f11d82675e4d839c33a83113426167)
+- [Part 2: Major Modules](https://www.loom.com/share/fa5eb928fe514ef4957a53bf8d00527d)
+- [Part 3: Authentication Providers](https://www.loom.com/share/3591fa935cca4bd28d707d25fba1a4de)
+- [Part 4: Data Structure And Storage](https://www.loom.com/share/29c02416c4e4419e85455cda88d4672c)
+- [Part 5: Critical Student Functionality Walkthrough](https://www.loom.com/share/6af9d6c889cd42268208ce05da53956e)
+- [Part 6: Critical Teacher Functionality Walkthrough](https://www.loom.com/share/63e9d35b3cb34a42b4526e7e4366510b)
+- [Part 7: Additional Functionality](https://www.loom.com/share/c542a258fb524aa58979a3e26c2efcd8)
+- [Part 8: Lessons Learned As A Team](https://www.loom.com/share/885742b5ce824c4ea15ee13cb77d0ffa)
+
+
+## Guides
+Read over the following documents to gain a better understanding of how to setup and use ReadRight app.
+
+- ### Teacher Quick-Start Guide ([PDF](../Teacher%20Quick-Start%20Guide.pdf))
+  > Provides an overview of the different screens used throughout the application.
+
+- ### Developer Setup Guide ([PDF](../Developer%20Setup%20Guide.pdf))
+  > Indicates external resources used with the application concerning Speech-To-Text (STT) for creating transcripts to backend services for authentication, database and file storage.
+  
+- ### Developer Data Model Diagram ([PDF](../Developer%20Data%20Model%20Diagram.pdf))
+  > Shows all Firebase Firestore database collections used and details about the fields used.
+
 ## Milestone 1 — Foundation & Vertical Slice (MVP)
 
 The **ReadRight** prototype is a dual-role educational platform designed for **teachers** and **students**.  
@@ -620,9 +647,13 @@ The following screens showcase teacher interfaces for the application:
 |:--:|:--:|
 | ![Login](./images/screen_teacher_class_progress.png) | ![Registration](./images/screen_teacher_class_details.png) |
 
-| Student Details | Word Dashboard (Edit) |
+| Word Dashboard (Edit) | Export Class Progress (CSV) |
 |:--:|:--:|
-| ![Student Details](./images/screen_teacher_student_details.png) | ![Word Dashboard](./images/screen_teacher_word_dashboard_edit.png) |
+| ![Word Dashboard](./images/screen_teacher_word_dashboard_edit.png) | ![Export Class Progress](./images/screen_export_class_progress.png) |
+
+| Student Details (Overview) | Student Details (Word Progress) |
+|:--:|:--:|
+| ![Student Details](./images/screen_teacher_student_details_overview.png) | ![Word Dashboard](./images/screen_teacher_student_details_word_progress.png) |
 
 ### Student Flow
 The following screens showcase student interfaces for the application:
@@ -631,7 +662,7 @@ The following screens showcase student interfaces for the application:
 |:--:|:--:|
 | ![Login](./images/screen_student_login.png) | ![Password Verification](./images/screen_student_password_verification.png) |
 
-| Word Practice List | Word Practice | 
+| Word Practice List (Hidden) | Word Practice | 
 |:--:|:--:|
 | ![Word Dashboard](./images/screen_student_word_dashboard.png) | ![Word Practice](./images/screen_student_word_practice.png) |
 
